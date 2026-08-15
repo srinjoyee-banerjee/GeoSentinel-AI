@@ -1,0 +1,13 @@
+{
+    "step": 30,
+    "title": "Flask + Frontend Integration",
+    "frontend_folder": "/content/drive/MyDrive/GeoSentinel_AI/render_deployment/frontend",
+    "backend": "Flask",
+    "model": "TRUE SHARED-WEIGHT SIAMESE U-NET",
+    "parameters": 1955393,
+    "threshold": 0.6,
+    "new_endpoint": "/predict-npy",
+    "frontend_served_from": "/",
+    "backup": "/content/drive/MyDrive/GeoSentinel_AI/render_deployment/backup_step30/app_original_step27.py",
+    "timestamp": "2026-08-15T13:33:16.032109"
+}

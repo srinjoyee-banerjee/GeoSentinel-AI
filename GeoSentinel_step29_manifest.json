@@ -1,0 +1,23 @@
+{
+    "step": 29,
+    "project": "GeoSentinel AI",
+    "deployment_target": "Render",
+    "backend": "Flask",
+    "architecture": "TRUE SHARED-WEIGHT SIAMESE U-NET",
+    "parameters": 1955393,
+    "input_shape": [
+        256,
+        256,
+        13
+    ],
+    "output_shape": [
+        256,
+        256,
+        1
+    ],
+    "threshold": 0.6,
+    "model_file": "model/GeoSentinel_best_model.weights.h5",
+    "model_size_mb": 22.5229,
+    "created": "2026-08-15T13:29:22.097310",
+    "status": "READY_FOR_GITHUB_AND_RENDER"
+}

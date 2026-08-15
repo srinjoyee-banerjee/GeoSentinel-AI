@@ -1,0 +1,18 @@
+{
+    "step": 31,
+    "title": "GeoSentinel AI Cinematic Frontend",
+    "frontend": {
+        "index": "frontend/index.html",
+        "css": "frontend/style.css",
+        "javascript": "frontend/script.js"
+    },
+    "backend_endpoint": "/predict-npy",
+    "health_endpoint": "/api/status",
+    "model_info_endpoint": "/model-info",
+    "input": [
+        256,
+        256,
+        13
+    ],
+    "threshold": 0.6
+}

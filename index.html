@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+>
+
+<title>GeoSentinel AI — Earth Intelligence</title>
+
+<link
+    rel="preconnect"
+    href="https://fonts.googleapis.com"
+>
+
+<link
+    rel="preconnect"
+    href="https://fonts.gstatic.com"
+    crossorigin
+>
+
+<link
+    href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet"
+>
+
+<link
+    rel="stylesheet"
+    href="/style.css"
+>
+
+</head>
+
+
+<body>
+
+<div class="stars"></div>
+
+<div class="scanline"></div>
+
+
+<!-- ======================================================
+     NAVIGATION
+====================================================== -->
+
+<header class="nav">
+
+    <div class="brand">
+
+        <div class="brand-mark">
+            GS
+        </div>
+
+        <div>
+            <div class="brand-name">
+                GEOSENTINEL
+            </div>
+
+            <div class="brand-sub">
+                EARTH INTELLIGENCE
+            </div>
+        </div>
+
+    </div>
+
+
+    <div class="nav-status">
+
+        <span
+            id="statusDot"
+            class="status-dot"
+        ></span>
+
+        <span id="statusText">
+            CONNECTING
+        </span>
+
+    </div>
+
+</header>
+
+
+<!-- ======================================================
+     HERO
+====================================================== -->
+
+<main>
+
+<section
+    id="hero"
+    class="hero section"
+>
+
+    <div class="hero-grid">
+
+        <div class="hero-copy">
+
+            <div class="eyebrow">
+                SATELLITE CHANGE INTELLIGENCE
+            </div>
+
+            <h1>
+                SEE WHAT
+                <span>CHANGED.</span>
+            </h1>
+
+            <p class="hero-description">
+                GeoSentinel AI compares multi-temporal
+                Sentinel imagery and identifies spatial
+                change using a shared-weight Siamese
+                U-Net architecture.
+            </p>
+
+
+            <div class="hero-actions">
+
+                <button
+                    class="primary-btn"
+                    onclick="scrollToAnalysis()"
+                >
+                    LAUNCH ANALYSIS
+                    <span>→</span>
+                </button>
+
+                <button
+                    class="ghost-btn"
+                    onclick="loadModelInfo()"
+                >
+                    MODEL INTELLIGENCE
+                </button>
+
+            </div>
+
+
+            <div class="hero-metrics">
+
+                <div>
+                    <strong>13</strong>
+                    <span>BANDS</span>
+                </div>
+
+                <div>
+                    <strong>256²</strong>
+                    <span>INPUT</span>
+                </div>
+
+                <div>
+                    <strong>1.95M</strong>
+                    <span>PARAMETERS</span>
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="orbital">
+
+            <div class="orbit orbit-one"></div>
+            <div class="orbit orbit-two"></div>
+            <div class="orbit orbit-three"></div>
+
+            <div class="earth-core">
+
+                <div class="earth-grid"></div>
+
+                <div class="earth-glow"></div>
+
+                <span>
+                    AI
+                </span>
+
+            </div>
+
+            <div class="satellite-dot"></div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- ======================================================
+     ANALYSIS
+====================================================== -->
+
+<section
+    id="analysis"
+    class="section analysis-section"
+>
+
+    <div class="section-heading">
+
+        <div class="eyebrow">
+            TEMPORAL ANALYSIS
+        </div>
+
+        <h2>
+            TWO MOMENTS.
+            <span>ONE CHANGE MAP.</span>
+        </h2>
+
+        <p>
+            Upload the preprocessed 13-band NumPy scenes
+            used by the GeoSentinel model.
+        </p>
+
+    </div>
+
+
+    <div class="upload-grid">
+
+
+        <!-- T1 -->
+
+        <div
+            class="upload-card"
+            id="t1Card"
+        >
+
+            <div class="card-number">
+                01
+            </div>
+
+            <div class="time-label">
+                T1 / BEFORE
+            </div>
+
+            <div class="upload-icon">
+                ◇
+            </div>
+
+            <h3>
+                EARLIER SCENE
+            </h3>
+
+            <p>
+                256 × 256 × 13
+            </p>
+
+            <label class="file-button">
+
+                SELECT T1
+
+                <input
+                    id="t1File"
+                    type="file"
+                    accept=".npy"
+                    hidden
+                >
+
+            </label>
+
+            <div
+                id="t1Name"
+                class="file-name"
+            >
+                No scene selected
+            </div>
+
+        </div>
+
+
+        <!-- CENTER -->
+
+        <div class="temporal-arrow">
+
+            <div class="pulse-ring"></div>
+
+            <span>→</span>
+
+            <small>
+                TEMPORAL
+                DIFFERENCE
+            </small>
+
+        </div>
+
+
+        <!-- T2 -->
+
+        <div
+            class="upload-card"
+            id="t2Card"
+        >
+
+            <div class="card-number">
+                02
+            </div>
+
+            <div class="time-label">
+                T2 / AFTER
+            </div>
+
+            <div class="upload-icon">
+                ◇
+            </div>
+
+            <h3>
+                LATER SCENE
+            </h3>
+
+            <p>
+                256 × 256 × 13
+            </p>
+
+            <label class="file-button">
+
+                SELECT T2
+
+                <input
+                    id="t2File"
+                    type="file"
+                    accept=".npy"
+                    hidden
+                >
+
+            </label>
+
+            <div
+                id="t2Name"
+                class="file-name"
+            >
+                No scene selected
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div class="analyze-container">
+
+        <button
+            id="analyzeBtn"
+            class="analyze-btn"
+            onclick="runAnalysis()"
+        >
+
+            <span class="btn-text">
+                DETECT CHANGE
+            </span>
+
+            <span class="btn-arrow">
+                ↗
+            </span>
+
+        </button>
+
+        <div
+            id="errorBox"
+            class="error-box"
+        ></div>
+
+    </div>
+
+</section>
+
+
+<!-- ======================================================
+     SCANNING
+====================================================== -->
+
+<section
+    id="processing"
+    class="processing section hidden"
+>
+
+    <div class="scanner">
+
+        <div class="scanner-core">
+
+            <div class="scanner-ring"></div>
+
+            <div class="scanner-ring ring-two"></div>
+
+            <div class="scanner-center">
+                GS
+            </div>
+
+        </div>
+
+        <div class="scanner-line"></div>
+
+    </div>
+
+
+    <div class="processing-text">
+
+        <div class="eyebrow">
+            GEOSENTINEL INFERENCE ENGINE
+        </div>
+
+        <h2>
+            ANALYZING
+            <span>CHANGE.</span>
+        </h2>
+
+        <p id="processingMessage">
+            Loading temporal scenes...
+        </p>
+
+    </div>
+
+</section>
+
+
+<!-- ======================================================
+     RESULTS
+====================================================== -->
+
+<section
+    id="results"
+    class="section results-section hidden"
+>
+
+    <div class="section-heading">
+
+        <div class="eyebrow">
+            INFERENCE COMPLETE
+        </div>
+
+        <h2>
+            CHANGE
+            <span>DETECTED.</span>
+        </h2>
+
+    </div>
+
+
+    <div class="result-hero">
+
+        <div class="change-number">
+
+            <span id="changePercentage">
+                0.00
+            </span>
+
+            <small>
+                %
+            </small>
+
+        </div>
+
+        <div>
+
+            <div class="result-label">
+                DETECTED CHANGE AREA
+            </div>
+
+            <div
+                id="changePixels"
+                class="result-detail"
+            >
+                0 pixels
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div class="map-grid">
+
+        <div class="map-card">
+
+            <div class="map-header">
+
+                <span>
+                    CHANGE PROBABILITY
+                </span>
+
+                <span>
+                    0 → 1
+                </span>
+
+            </div>
+
+            <canvas
+                id="probabilityCanvas"
+                width="256"
+                height="256"
+            ></canvas>
+
+        </div>
+
+
+        <div class="map-card">
+
+            <div class="map-header">
+
+                <span>
+                    BINARY CHANGE MAP
+                </span>
+
+                <span>
+                    THRESHOLD 0.60
+                </span>
+
+            </div>
+
+            <canvas
+                id="changeCanvas"
+                width="256"
+                height="256"
+            ></canvas>
+
+        </div>
+
+    </div>
+
+
+    <div class="stats-grid">
+
+        <div class="stat-card">
+
+            <span>
+                MIN PROBABILITY
+            </span>
+
+            <strong id="minProb">
+                —
+            </strong>
+
+        </div>
+
+        <div class="stat-card">
+
+            <span>
+                MAX PROBABILITY
+            </span>
+
+            <strong id="maxProb">
+                —
+            </strong>
+
+        </div>
+
+        <div class="stat-card">
+
+            <span>
+                CHANGED PIXELS
+            </span>
+
+            <strong id="changedPixelsStat">
+                —
+            </strong>
+
+        </div>
+
+        <div class="stat-card">
+
+            <span>
+                TOTAL PIXELS
+            </span>
+
+            <strong>
+                65,536
+            </strong>
+
+        </div>
+
+    </div>
+
+
+    <button
+        class="secondary-btn"
+        onclick="resetAnalysis()"
+    >
+        ← NEW ANALYSIS
+    </button>
+
+</section>
+
+
+<!-- ======================================================
+     MODEL
+====================================================== -->
+
+<section
+    id="model"
+    class="section model-section"
+>
+
+    <div class="section-heading">
+
+        <div class="eyebrow">
+            MODEL INTELLIGENCE
+        </div>
+
+        <h2>
+            INSIDE THE
+            <span>ENGINE.</span>
+        </h2>
+
+    </div>
+
+
+    <div class="architecture">
+
+        <div class="architecture-line"></div>
+
+        <div class="architecture-node">
+            <strong>T1</strong>
+            <span>13 BANDS</span>
+        </div>
+
+        <div class="architecture-node">
+            <strong>T2</strong>
+            <span>13 BANDS</span>
+        </div>
+
+        <div class="architecture-node highlight">
+            <strong>SIAMESE</strong>
+            <span>SHARED WEIGHTS</span>
+        </div>
+
+        <div class="architecture-node">
+            <strong>U-NET</strong>
+            <span>DECODER</span>
+        </div>
+
+        <div class="architecture-node">
+            <strong>CHANGE</strong>
+            <span>MAP</span>
+        </div>
+
+    </div>
+
+
+    <div class="model-cards">
+
+        <div>
+            <strong>1,955,393</strong>
+            <span>PARAMETERS</span>
+        </div>
+
+        <div>
+            <strong>256 × 256</strong>
+            <span>SPATIAL INPUT</span>
+        </div>
+
+        <div>
+            <strong>0.60</strong>
+            <span>DECISION THRESHOLD</span>
+        </div>
+
+        <div>
+            <strong>13</strong>
+            <span>SPECTRAL CHANNELS</span>
+        </div>
+
+    </div>
+
+</section>
+
+</main>
+
+
+<footer>
+
+    <div>
+        GEOSENTINEL AI
+    </div>
+
+    <span>
+        SATELLITE CHANGE INTELLIGENCE
+    </span>
+
+</footer>
+
+
+<script src="/script.js"></script>
+
+</body>
+</html>

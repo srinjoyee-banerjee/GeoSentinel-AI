@@ -1,0 +1,30 @@
+{
+    "input_size": [
+        256,
+        256
+    ],
+    "input_channels": 13,
+    "threshold": 0.6,
+    "output_channels": 1,
+    "output_type": "change_probability",
+    "binary_output": "probability >= threshold",
+    "dtype": "float32",
+    "expected_T1_shape": [
+        1,
+        256,
+        256,
+        13
+    ],
+    "expected_T2_shape": [
+        1,
+        256,
+        256,
+        13
+    ],
+    "expected_output_shape": [
+        1,
+        256,
+        256,
+        1
+    ]
+}
