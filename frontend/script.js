@@ -1,14 +1,14 @@
-```javascript
 /* ============================================================
    GEOSENTINEL AI
    FRONTEND SCRIPT
+   3-PAGE SATELLITE CHANGE DETECTION INTERFACE
    ============================================================ */
 
 document.addEventListener("DOMContentLoaded", () => {
 
     /* ========================================================
        CONFIGURATION
-       ======================================================== */
+    ======================================================== */
 
     const API_BASE =
         window.location.hostname === "localhost" ||
@@ -18,12 +18,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const API_URL = `${API_BASE}/predict`;
 
-    const DEMO_T1 = "assets/T1_demo.png";
-    const DEMO_T2 = "assets/T2_demo.png";
+    const DEFAULT_SCENE = "urban_1";
 
     /* ========================================================
-       DOM HELPERS
-       ======================================================== */
+       DOM HELPER
+    ======================================================== */
 
     const $ = (id) => document.getElementById(id);
 
@@ -35,65 +34,167 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     /* ========================================================
-       COMMON ELEMENTS
-       ======================================================== */
+       PAGES
+    ======================================================== */
 
-    const t1Input =
-        $("t1Input") ||
-        $("t1File") ||
-        query("#t1 input[type='file']") ||
-        query("input[name='t1']");
+    const page1 = $("page1");
+    const page2 = $("page2");
+    const page3 = $("page3");
 
-    const t2Input =
-        $("t2Input") ||
-        $("t2File") ||
-        query("#t2 input[type='file']") ||
-        query("input[name='t2']");
+    const pages = [
+        page1,
+        page2,
+        page3
+    ].filter(Boolean);
+
+
+    /* ========================================================
+       NAVIGATION
+    ======================================================== */
+
+    const stepIndicators =
+        queryAll(".step");
+
+    function showPage(pageNumber) {
+
+        pages.forEach((page) => {
+
+            page.classList.remove(
+                "active-page"
+            );
+
+        });
+
+        const targetPage =
+            $(`page${pageNumber}`);
+
+        if (targetPage) {
+
+            targetPage.classList.add(
+                "active-page"
+            );
+        }
+
+        stepIndicators.forEach((step) => {
+
+            const stepNumber =
+                Number(
+                    step.dataset.step
+                );
+
+            step.classList.toggle(
+                "active",
+                stepNumber === pageNumber
+            );
+
+            step.classList.toggle(
+                "completed",
+                stepNumber < pageNumber
+            );
+        });
+
+        window.scrollTo({
+            top: 0,
+            behavior: "smooth"
+        });
+    }
+
+
+    /* ========================================================
+       SCENE CONFIGURATION
+    ======================================================== */
+
+    const scenes = {
+
+        urban_1: {
+            name: "Urban Expansion 01",
+
+            t1:
+                "assets/urban_1_T1.png",
+
+            t2:
+                "assets/urban_1_T2.png"
+        },
+
+        urban_2: {
+            name: "Urban Expansion 02",
+
+            t1:
+                "assets/urban_2_T1.png",
+
+            t2:
+                "assets/urban_2_T2.png"
+        },
+
+        urban_3: {
+            name: "Urban Expansion 03",
+
+            t1:
+                "assets/urban_3_T1.png",
+
+            t2:
+                "assets/urban_3_T2.png"
+        }
+    };
+
+
+    /* ========================================================
+       SCENE SELECTORS
+    ======================================================== */
+
+    const t1Select =
+        $("t1Select");
+
+    const t2Select =
+        $("t2Select");
+
+
+    /* ========================================================
+       PREVIEW ELEMENTS
+    ======================================================== */
 
     const t1Preview =
-        $("t1Preview") ||
-        $("previewT1") ||
-        $("resultT1");
+        $("t1Preview");
 
     const t2Preview =
-        $("t2Preview") ||
-        $("previewT2") ||
+        $("t2Preview");
+
+    const analysisT1 =
+        $("analysisT1");
+
+    const analysisT2 =
+        $("analysisT2");
+
+    const resultT1 =
+        $("resultT1");
+
+    const resultT2 =
         $("resultT2");
 
-    const analyzeButton =
-        $("analyzeBtn") ||
-        $("analyzeButton") ||
-        $("runAnalysis") ||
-        query("[data-action='analyze']");
 
-    const resetButton =
-        $("resetBtn") ||
-        $("resetButton") ||
-        query("[data-action='reset']");
+    /* ========================================================
+       BUTTONS
+    ======================================================== */
 
-    const loading =
-        $("loading") ||
-        $("loadingOverlay") ||
-        $("analysisLoading");
+    const continueBtn =
+        $("continueBtn");
 
-    const resultSection =
-        $("results") ||
-        $("resultSection") ||
-        $("analysisResults");
+    const backBtn =
+        $("backBtn");
 
-    const errorBox =
-        $("errorMessage") ||
-        $("error") ||
-        $("statusMessage");
+    const analyzeBtn =
+        $("analyzeBtn");
+
+    const newAnalysisBtn =
+        $("newAnalysisBtn");
+
 
     /* ========================================================
        RESULT ELEMENTS
-       ======================================================== */
+    ======================================================== */
 
     const changePercentage =
-        $("changePercentage") ||
-        $("changePercent") ||
-        $("changeValue");
+        $("changePercentage");
 
     const changePixels =
         $("changePixels");
@@ -101,253 +202,643 @@ document.addEventListener("DOMContentLoaded", () => {
     const totalPixels =
         $("totalPixels");
 
-    const thresholdValue =
-        $("thresholdValue") ||
+    const threshold =
         $("threshold");
 
-    const probabilityMin =
-        $("probabilityMin");
+    const interpretationText =
+        $("interpretationText");
 
-    const probabilityMax =
-        $("probabilityMax");
+    const resultSummary =
+        $("resultSummary");
 
-    const changeMapCanvas =
-        $("changeMapCanvas") ||
-        $("changeMap");
+    const changeCanvas =
+        $("changeCanvas");
 
-    const probabilityCanvas =
-        $("probabilityCanvas") ||
-        $("probabilityMap");
+    const mapLoading =
+        $("mapLoading");
+
+
+    /* ========================================================
+       STATUS
+    ======================================================== */
+
+    const analysisStatus =
+        $("analysisStatus");
+
 
     /* ========================================================
        STATE
-       ======================================================== */
+    ======================================================== */
 
-    let selectedT1 = null;
-    let selectedT2 = null;
+    let selectedSceneT1 =
+        DEFAULT_SCENE;
 
-    let currentResult = null;
+    let selectedSceneT2 =
+        DEFAULT_SCENE;
+
+    let currentResult =
+        null;
+
 
     /* ========================================================
-       INITIAL STATE
-       ======================================================== */
+       INITIALIZATION
+    ======================================================== */
 
-    hideLoading();
-    hideError();
+    initializeScene();
 
-    if (resultSection) {
-        resultSection.style.display = "none";
+    showPage(1);
+
+    console.log(
+        "=================================================="
+    );
+
+    console.log(
+        "GeoSentinel AI frontend initialized."
+    );
+
+    console.log(
+        "API:",
+        API_URL
+    );
+
+    console.log(
+        "=================================================="
+    );
+
+
+    /* ========================================================
+       INITIAL SCENE
+    ======================================================== */
+
+    function initializeScene() {
+
+        if (t1Select) {
+
+            t1Select.value =
+                DEFAULT_SCENE;
+        }
+
+        if (t2Select) {
+
+            t2Select.value =
+                DEFAULT_SCENE;
+        }
+
+        updateT1Preview();
+        updateT2Preview();
     }
 
+
     /* ========================================================
-       FILE PREVIEW
-       ======================================================== */
+       UPDATE T1
+    ======================================================== */
 
-    function previewFile(input, preview) {
+    function updateT1Preview() {
 
-        if (!input || !preview) {
+        const sceneKey =
+            t1Select
+                ? t1Select.value
+                : DEFAULT_SCENE;
+
+        const scene =
+            scenes[sceneKey];
+
+        if (!scene) {
             return;
         }
 
-        input.addEventListener("change", () => {
-
-            const file = input.files && input.files[0];
-
-            if (!file) {
-                return;
-            }
-
-            if (!file.type.startsWith("image/")) {
-                showError(
-                    "Please select a valid satellite image."
-                );
-                return;
-            }
-
-            const reader = new FileReader();
-
-            reader.onload = (event) => {
-
-                preview.src = event.target.result;
-
-                preview.style.display = "block";
-
-                preview.dataset.loaded = "true";
-            };
-
-            reader.readAsDataURL(file);
-        });
-    }
-
-    previewFile(t1Input, t1Preview);
-    previewFile(t2Input, t2Preview);
-
-    /* ========================================================
-       DEMO IMAGES
-       ======================================================== */
-
-    function loadDemoImages() {
+        selectedSceneT1 =
+            sceneKey;
 
         if (t1Preview) {
-            t1Preview.src = DEMO_T1;
-            t1Preview.style.display = "block";
+
+            t1Preview.src =
+                scene.t1;
         }
 
-        if (t2Preview) {
-            t2Preview.src = DEMO_T2;
-            t2Preview.style.display = "block";
+        if (analysisT1) {
+
+            analysisT1.src =
+                scene.t1;
+        }
+
+        if (resultT1) {
+
+            resultT1.src =
+                scene.t1;
         }
     }
 
 
     /* ========================================================
-       IMAGE → ARRAY
-       
-       IMPORTANT:
-       The deployed backend expects:
-       [1, 256, 256, 13]
+       UPDATE T2
+    ======================================================== */
 
-       Browser images are RGB, therefore the frontend
-       creates a 13-channel representation by repeating
-       the RGB-derived channels.
+    function updateT2Preview() {
 
-       This is intended for DEMO / frontend operation.
-       ======================================================== */
+        const sceneKey =
+            t2Select
+                ? t2Select.value
+                : DEFAULT_SCENE;
+
+        const scene =
+            scenes[sceneKey];
+
+        if (!scene) {
+            return;
+        }
+
+        selectedSceneT2 =
+            sceneKey;
+
+        if (t2Preview) {
+
+            t2Preview.src =
+                scene.t2;
+        }
+
+        if (analysisT2) {
+
+            analysisT2.src =
+                scene.t2;
+        }
+
+        if (resultT2) {
+
+            resultT2.src =
+                scene.t2;
+        }
+    }
+
+
+    /* ========================================================
+       SELECT EVENTS
+    ======================================================== */
+
+    if (t1Select) {
+
+        t1Select.addEventListener(
+            "change",
+            () => {
+
+                updateT1Preview();
+            }
+        );
+    }
+
+
+    if (t2Select) {
+
+        t2Select.addEventListener(
+            "change",
+            () => {
+
+                updateT2Preview();
+            }
+        );
+    }
+
+
+    /* ========================================================
+       CONTINUE TO ANALYSIS
+    ======================================================== */
+
+    if (continueBtn) {
+
+        continueBtn.addEventListener(
+            "click",
+            (event) => {
+
+                event.preventDefault();
+
+                updateT1Preview();
+                updateT2Preview();
+
+                updateAnalysisStatus(
+                    "READY FOR AI ANALYSIS",
+                    false
+                );
+
+                showPage(2);
+            }
+        );
+    }
+
+
+    /* ========================================================
+       BACK TO SCENE SELECTION
+    ======================================================== */
+
+    if (backBtn) {
+
+        backBtn.addEventListener(
+            "click",
+            (event) => {
+
+                event.preventDefault();
+
+                showPage(1);
+            }
+        );
+    }
+
+
+    /* ========================================================
+       ANALYZE BUTTON
+    ======================================================== */
+
+    if (analyzeBtn) {
+
+        analyzeBtn.addEventListener(
+            "click",
+            async (event) => {
+
+                event.preventDefault();
+
+                await runAnalysis();
+            }
+        );
+    }
+
+
+    /* ========================================================
+       NEW ANALYSIS
+    ======================================================== */
+
+    if (newAnalysisBtn) {
+
+        newAnalysisBtn.addEventListener(
+            "click",
+            (event) => {
+
+                event.preventDefault();
+
+                resetAnalysis();
+
+                showPage(1);
+            }
+        );
+    }
+
+
+    /* ========================================================
+       RUN ANALYSIS
+    ======================================================== */
+
+    async function runAnalysis() {
+
+        if (!scenes[selectedSceneT1]) {
+
+            showAnalysisError(
+                "Invalid T1 scene selected."
+            );
+
+            return;
+        }
+
+        if (!scenes[selectedSceneT2]) {
+
+            showAnalysisError(
+                "Invalid T2 scene selected."
+            );
+
+            return;
+        }
+
+        try {
+
+            setAnalysisRunning(true);
+
+            updateAnalysisStatus(
+                "RUNNING AI CHANGE DETECTION...",
+                true
+            );
+
+            if (mapLoading) {
+
+                mapLoading.style.display =
+                    "flex";
+            }
+
+            /*
+             * Load selected satellite images.
+             */
+
+            const t1File =
+                await urlToFile(
+                    scenes[selectedSceneT1].t1,
+                    `${selectedSceneT1}_T1.png`
+                );
+
+            const t2File =
+                await urlToFile(
+                    scenes[selectedSceneT2].t2,
+                    `${selectedSceneT2}_T2.png`
+                );
+
+            /*
+             * Convert images to model input.
+             */
+
+            const t1Tensor =
+                await imageToTensor(
+                    t1File
+                );
+
+            const t2Tensor =
+                await imageToTensor(
+                    t2File
+                );
+
+            /*
+             * Send request to Flask backend.
+             */
+
+            const response =
+                await fetch(
+                    API_URL,
+                    {
+                        method: "POST",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+
+                        body: JSON.stringify({
+
+                            t1:
+                                t1Tensor,
+
+                            t2:
+                                t2Tensor
+                        })
+                    }
+                );
+
+            let data;
+
+            try {
+
+                data =
+                    await response.json();
+
+            } catch (jsonError) {
+
+                throw new Error(
+                    "The GeoSentinel backend returned an invalid response."
+                );
+            }
+
+
+            if (!response.ok) {
+
+                throw new Error(
+                    data.message ||
+                    data.error ||
+                    "GeoSentinel analysis failed."
+                );
+            }
+
+
+            if (
+                data.status &&
+                data.status !== "success"
+            ) {
+
+                throw new Error(
+                    data.message ||
+                    "The AI model returned an error."
+                );
+            }
+
+
+            currentResult =
+                data;
+
+
+            /*
+             * Display result images.
+             */
+
+            updateResultImages();
+
+
+            /*
+             * Display AI results.
+             */
+
+            displayResults(
+                data
+            );
+
+
+            /*
+             * Move to results page.
+             */
+
+            showPage(3);
+
+
+        } catch (error) {
+
+            console.error(
+                "GeoSentinel error:",
+                error
+            );
+
+            showAnalysisError(
+                error.message ||
+                "Unable to connect to GeoSentinel AI."
+            );
+
+        } finally {
+
+            setAnalysisRunning(
+                false
+            );
+
+            if (mapLoading) {
+
+                mapLoading.style.display =
+                    "none";
+            }
+        }
+    }
+
+
+    /* ========================================================
+       IMAGE → 13 CHANNEL TENSOR
+    ======================================================== */
 
     async function imageToTensor(file) {
 
-        return new Promise((resolve, reject) => {
+        return new Promise(
+            (resolve, reject) => {
 
-            const image = new Image();
+                const image =
+                    new Image();
 
-            image.onload = () => {
+                image.onload = () => {
 
-                try {
+                    try {
 
-                    const canvas =
-                        document.createElement("canvas");
+                        const canvas =
+                            document.createElement(
+                                "canvas"
+                            );
 
-                    canvas.width = 256;
-                    canvas.height = 256;
+                        canvas.width =
+                            256;
 
-                    const ctx =
-                        canvas.getContext("2d", {
-                            willReadFrequently: true
-                        });
+                        canvas.height =
+                            256;
 
-                    ctx.drawImage(
-                        image,
-                        0,
-                        0,
-                        256,
-                        256
-                    );
 
-                    const imageData =
-                        ctx.getImageData(
+                        const ctx =
+                            canvas.getContext(
+                                "2d",
+                                {
+                                    willReadFrequently:
+                                        true
+                                }
+                            );
+
+
+                        ctx.drawImage(
+                            image,
                             0,
                             0,
                             256,
                             256
                         );
 
-                    const pixels =
-                        imageData.data;
 
-                    const tensor =
-                        new Array(256);
+                        const imageData =
+                            ctx.getImageData(
+                                0,
+                                0,
+                                256,
+                                256
+                            );
 
-                    for (let y = 0; y < 256; y++) {
 
-                        tensor[y] =
+                        const pixels =
+                            imageData.data;
+
+
+                        const tensor =
                             new Array(256);
 
-                        for (let x = 0; x < 256; x++) {
 
-                            const pixelIndex =
-                                (y * 256 + x) * 4;
+                        for (
+                            let y = 0;
+                            y < 256;
+                            y++
+                        ) {
 
-                            const r =
-                                pixels[pixelIndex] / 255;
+                            tensor[y] =
+                                new Array(256);
 
-                            const g =
-                                pixels[pixelIndex + 1] / 255;
 
-                            const b =
-                                pixels[pixelIndex + 2] / 255;
+                            for (
+                                let x = 0;
+                                x < 256;
+                                x++
+                            ) {
 
-                            /*
-                             * 13-channel approximation
-                             *
-                             * The real model expects 13
-                             * channels. For browser demo
-                             * images we construct a stable
-                             * 13-channel tensor from RGB.
-                             */
+                                const i =
+                                    (y * 256 + x) * 4;
 
-                            tensor[y][x] = [
 
-                                r,
-                                g,
-                                b,
+                                const r =
+                                    pixels[i] / 255;
 
-                                (r + g) / 2,
-                                (g + b) / 2,
-                                (r + b) / 2,
+                                const g =
+                                    pixels[i + 1] / 255;
 
-                                Math.abs(r - g),
-                                Math.abs(g - b),
-                                Math.abs(r - b),
+                                const b =
+                                    pixels[i + 2] / 255;
 
-                                (r + g + b) / 3,
 
-                                r * r,
-                                g * g,
-                                b * b
-                            ];
+                                tensor[y][x] = [
+
+                                    r,
+
+                                    g,
+
+                                    b,
+
+                                    (r + g) / 2,
+
+                                    (g + b) / 2,
+
+                                    (r + b) / 2,
+
+                                    Math.abs(
+                                        r - g
+                                    ),
+
+                                    Math.abs(
+                                        g - b
+                                    ),
+
+                                    Math.abs(
+                                        r - b
+                                    ),
+
+                                    (
+                                        r +
+                                        g +
+                                        b
+                                    ) / 3,
+
+                                    r * r,
+
+                                    g * g,
+
+                                    b * b
+                                ];
+                            }
                         }
+
+
+                        resolve(
+                            tensor
+                        );
+
+
+                    } catch (error) {
+
+                        reject(
+                            error
+                        );
                     }
+                };
 
-                    resolve([tensor]);
 
-                } catch (error) {
+                image.onerror = () => {
 
-                    reject(error);
-                }
-            };
+                    reject(
+                        new Error(
+                            "Unable to read satellite image."
+                        )
+                    );
+                };
 
-            image.onerror = () => {
 
-                reject(
-                    new Error(
-                        "Unable to read the selected image."
-                    )
-                );
-            };
-
-            image.src =
-                URL.createObjectURL(file);
-        });
+                image.src =
+                    URL.createObjectURL(
+                        file
+                    );
+            }
+        );
     }
 
 
     /* ========================================================
-       GET IMAGE FILE
-       ======================================================== */
-
-    function getFile(input) {
-
-        if (!input || !input.files) {
-            return null;
-        }
-
-        return input.files[0] || null;
-    }
-
-
-    /* ========================================================
-       DEMO FILE LOADER
-       ======================================================== */
+       URL → FILE
+    ======================================================== */
 
     async function urlToFile(
         url,
@@ -358,6 +849,7 @@ document.addEventListener("DOMContentLoaded", () => {
             await fetch(url);
 
         if (!response.ok) {
+
             throw new Error(
                 `Unable to load ${filename}.`
             );
@@ -379,316 +871,196 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     /* ========================================================
-       RUN ANALYSIS
-       ======================================================== */
+       UPDATE RESULT IMAGES
+    ======================================================== */
 
-    async function runAnalysis() {
+    function updateResultImages() {
 
-        hideError();
+        const t1 =
+            scenes[selectedSceneT1];
 
-        let t1File =
-            getFile(t1Input);
+        const t2 =
+            scenes[selectedSceneT2];
 
-        let t2File =
-            getFile(t2Input);
 
-        /*
-         * If no files are selected, automatically use
-         * the included demo scenes.
-         */
+        if (resultT1) {
 
-        if (!t1File) {
-
-            try {
-
-                t1File =
-                    await urlToFile(
-                        DEMO_T1,
-                        "T1_demo.png"
-                    );
-
-            } catch (error) {
-
-                showError(
-                    "T1 image is missing. Please upload a T1 image."
-                );
-
-                return;
-            }
+            resultT1.src =
+                t1.t1;
         }
 
-        if (!t2File) {
 
-            try {
+        if (resultT2) {
 
-                t2File =
-                    await urlToFile(
-                        DEMO_T2,
-                        "T2_demo.png"
-                    );
-
-            } catch (error) {
-
-                showError(
-                    "T2 image is missing. Please upload a T2 image."
-                );
-
-                return;
-            }
-        }
-
-        selectedT1 = t1File;
-        selectedT2 = t2File;
-
-        try {
-
-            showLoading();
-
-            setAnalysisButtonState(true);
-
-            /*
-             * Convert both images.
-             */
-
-            const t1Tensor =
-                await imageToTensor(
-                    t1File
-                );
-
-            const t2Tensor =
-                await imageToTensor(
-                    t2File
-                );
-
-            /*
-             * Backend expects JSON:
-             *
-             * {
-             *   t1: [...],
-             *   t2: [...]
-             * }
-             */
-
-            const response =
-                await fetch(
-                    API_URL,
-                    {
-                        method: "POST",
-
-                        headers: {
-                            "Content-Type":
-                                "application/json"
-                        },
-
-                        body: JSON.stringify({
-                            t1: t1Tensor[0],
-                            t2: t2Tensor[0]
-                        })
-                    }
-                );
-
-            const data =
-                await response.json();
-
-            if (!response.ok) {
-
-                throw new Error(
-                    data.message ||
-                    data.error ||
-                    "GeoSentinel analysis failed."
-                );
-            }
-
-            if (
-                data.status &&
-                data.status !== "success"
-            ) {
-
-                throw new Error(
-                    data.message ||
-                    "Model returned an error."
-                );
-            }
-
-            currentResult = data;
-
-            displayResults(data);
-
-        } catch (error) {
-
-            console.error(
-                "GeoSentinel error:",
-                error
-            );
-
-            showError(
-                error.message ||
-                "Unable to connect to GeoSentinel AI."
-            );
-
-        } finally {
-
-            hideLoading();
-
-            setAnalysisButtonState(false);
+            resultT2.src =
+                t2.t2;
         }
     }
 
 
     /* ========================================================
        DISPLAY RESULTS
-       ======================================================== */
+    ======================================================== */
 
     function displayResults(data) {
 
-        if (resultSection) {
-            resultSection.style.display = "";
-        }
+        const percentage =
+            Number(
+                data.change_percentage ??
+                data.change_percent ??
+                0
+            );
 
-        /*
-         * Change percentage
-         */
+
+        const changedPixels =
+            Number(
+                data.change_pixels ??
+                0
+            );
+
+
+        const pixels =
+            Number(
+                data.total_pixels ??
+                256 * 256
+            );
+
+
+        const modelThreshold =
+            Number(
+                data.threshold ??
+                0.60
+            );
+
 
         if (changePercentage) {
-
-            const percentage =
-                Number(
-                    data.change_percentage || 0
-                );
 
             changePercentage.textContent =
                 `${percentage.toFixed(2)}%`;
         }
 
-        /*
-         * Change pixels
-         */
 
         if (changePixels) {
 
             changePixels.textContent =
                 formatNumber(
-                    data.change_pixels || 0
+                    changedPixels
                 );
         }
 
-        /*
-         * Total pixels
-         */
 
         if (totalPixels) {
 
             totalPixels.textContent =
                 formatNumber(
-                    data.total_pixels || 0
+                    pixels
                 );
         }
 
-        /*
-         * Threshold
-         */
 
-        if (thresholdValue) {
+        if (threshold) {
 
-            const threshold =
-                Number(
-                    data.threshold ?? 0.60
-                );
-
-            thresholdValue.textContent =
-                threshold.toFixed(2);
+            threshold.textContent =
+                modelThreshold.toFixed(2);
         }
 
-        /*
-         * Probability range
-         */
-
-        if (probabilityMin) {
-
-            probabilityMin.textContent =
-                Number(
-                    data.probability_min || 0
-                ).toFixed(4);
-        }
-
-        if (probabilityMax) {
-
-            probabilityMax.textContent =
-                Number(
-                    data.probability_max || 0
-                ).toFixed(4);
-        }
 
         /*
-         * Render change map.
+         * Change map.
          */
 
-        if (data.change_map) {
+        if (
+            data.change_map &&
+            changeCanvas
+        ) {
 
             renderChangeMap(
                 data.change_map,
-                changeMapCanvas
+                changeCanvas,
+                modelThreshold
             );
         }
 
+
         /*
-         * Render probability map.
+         * Interpretation.
          */
 
-        if (data.probability_map) {
-
-            renderProbabilityMap(
-                data.probability_map,
-                probabilityCanvas
+        const interpretation =
+            generateInterpretation(
+                percentage
             );
+
+
+        if (interpretationText) {
+
+            interpretationText.textContent =
+                interpretation;
         }
 
-        /*
-         * Scroll to results.
-         */
 
-        if (resultSection) {
+        if (resultSummary) {
 
-            setTimeout(() => {
-
-                resultSection.scrollIntoView({
-                    behavior: "smooth",
-                    block: "start"
-                });
-
-            }, 150);
+            resultSummary.textContent =
+                `GeoSentinel AI analyzed ${scenes[selectedSceneT1].name} and compared the earlier and later satellite observations.`;
         }
+
+
+        updateAnalysisStatus(
+            "ANALYSIS COMPLETE",
+            false
+        );
     }
 
 
     /* ========================================================
        CHANGE MAP
-       ======================================================== */
+    ======================================================== */
 
     function renderChangeMap(
         map,
-        canvas
+        canvas,
+        thresholdValue = 0.60
     ) {
 
-        if (!canvas || !map) {
+        if (
+            !canvas ||
+            !Array.isArray(map)
+        ) {
+
             return;
         }
+
 
         const height =
             map.length;
 
+
         const width =
             map[0]?.length || 0;
 
-        if (!width || !height) {
+
+        if (
+            !width ||
+            !height
+        ) {
+
             return;
         }
 
-        canvas.width = width;
-        canvas.height = height;
+
+        canvas.width =
+            width;
+
+        canvas.height =
+            height;
+
 
         const ctx =
-            canvas.getContext("2d");
+            canvas.getContext(
+                "2d"
+            );
+
 
         const imageData =
             ctx.createImageData(
@@ -696,24 +1068,38 @@ document.addEventListener("DOMContentLoaded", () => {
                 height
             );
 
-        for (let y = 0; y < height; y++) {
 
-            for (let x = 0; x < width; x++) {
+        for (
+            let y = 0;
+            y < height;
+            y++
+        ) {
+
+            for (
+                let x = 0;
+                x < width;
+                x++
+            ) {
 
                 const value =
                     Number(
                         map[y][x]
-                    ) >= 0.5
-                        ? 1
-                        : 0;
+                    );
+
+
+                const changed =
+                    value >=
+                    thresholdValue;
+
 
                 const index =
                     (y * width + x) * 4;
 
-                if (value === 1) {
+
+                if (changed) {
 
                     /*
-                     * Change region
+                     * Changed pixels
                      */
 
                     imageData.data[index] =
@@ -731,7 +1117,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 } else {
 
                     /*
-                     * No change
+                     * Unchanged pixels
                      */
 
                     imageData.data[index] =
@@ -749,102 +1135,6 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
 
-        ctx.putImageData(
-            imageData,
-            0,
-            0
-        );
-
-        canvas.style.display = "block";
-    }
-
-
-    /* ========================================================
-       PROBABILITY MAP
-       ======================================================== */
-
-    function renderProbabilityMap(
-        map,
-        canvas
-    ) {
-
-        if (!canvas || !map) {
-            return;
-        }
-
-        const height =
-            map.length;
-
-        const width =
-            map[0]?.length || 0;
-
-        if (!width || !height) {
-            return;
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-
-        const ctx =
-            canvas.getContext("2d");
-
-        const imageData =
-            ctx.createImageData(
-                width,
-                height
-            );
-
-        for (let y = 0; y < height; y++) {
-
-            for (let x = 0; x < width; x++) {
-
-                const value =
-                    Math.max(
-                        0,
-                        Math.min(
-                            1,
-                            Number(
-                                map[y][x]
-                            )
-                        )
-                    );
-
-                /*
-                 * Dark → cyan → yellow → white
-                 * probability visualization.
-                 */
-
-                const r =
-                    Math.round(
-                        255 * value
-                    );
-
-                const g =
-                    Math.round(
-                        120 * value
-                    );
-
-                const b =
-                    Math.round(
-                        255 * (1 - value)
-                    );
-
-                const index =
-                    (y * width + x) * 4;
-
-                imageData.data[index] =
-                    r;
-
-                imageData.data[index + 1] =
-                    g;
-
-                imageData.data[index + 2] =
-                    b;
-
-                imageData.data[index + 3] =
-                    255;
-            }
-        }
 
         ctx.putImageData(
             imageData,
@@ -852,189 +1142,282 @@ document.addEventListener("DOMContentLoaded", () => {
             0
         );
 
-        canvas.style.display = "block";
-    }
 
-
-    /* ========================================================
-       NUMBER FORMAT
-       ======================================================== */
-
-    function formatNumber(value) {
-
-        return Number(value)
-            .toLocaleString(
-                "en-IN"
-            );
-    }
-
-
-    /* ========================================================
-       LOADING
-       ======================================================== */
-
-    function showLoading() {
-
-        if (loading) {
-
-            loading.style.display =
-                "flex";
-        }
-
-        document.body.classList.add(
-            "analysis-running"
-        );
-    }
-
-    function hideLoading() {
-
-        if (loading) {
-
-            loading.style.display =
-                "none";
-        }
-
-        document.body.classList.remove(
-            "analysis-running"
-        );
-    }
-
-
-    /* ========================================================
-       ERROR HANDLING
-       ======================================================== */
-
-    function showError(message) {
-
-        console.error(
-            message
-        );
-
-        if (!errorBox) {
-            return;
-        }
-
-        errorBox.textContent =
-            message;
-
-        errorBox.style.display =
+        canvas.style.display =
             "block";
     }
 
-    function hideError() {
 
-        if (!errorBox) {
-            return;
+    /* ========================================================
+       INTERPRETATION
+    ======================================================== */
+
+    function generateInterpretation(
+        percentage
+    ) {
+
+        if (percentage <= 1) {
+
+            return (
+                "Very limited surface change was detected between the two satellite observations. The scene remains largely stable."
+            );
         }
 
-        errorBox.textContent = "";
 
-        errorBox.style.display =
-            "none";
+        if (percentage <= 5) {
+
+            return (
+                "A small amount of spatial change was detected. The affected regions represent localized modifications within the observed area."
+            );
+        }
+
+
+        if (percentage <= 15) {
+
+            return (
+                "Moderate spatial change was detected. The observed pattern suggests noticeable land-surface modification between the two time points."
+            );
+        }
+
+
+        if (percentage <= 30) {
+
+            return (
+                "Significant spatial change was detected across the scene. The distribution of changed pixels indicates substantial land-surface transformation."
+            );
+        }
+
+
+        return (
+            "Extensive spatial change was detected. A large proportion of the observed scene has undergone measurable transformation between T1 and T2."
+        );
     }
 
 
     /* ========================================================
-       BUTTON STATE
-       ======================================================== */
+       ANALYSIS STATUS
+    ======================================================== */
 
-    function setAnalysisButtonState(
+    function updateAnalysisStatus(
+        message,
         running
     ) {
 
-        if (!analyzeButton) {
+        if (!analysisStatus) {
             return;
         }
 
-        analyzeButton.disabled =
+
+        const statusText =
+            analysisStatus.querySelector(
+                "span"
+            );
+
+
+        if (statusText) {
+
+            statusText.textContent =
+                message;
+        }
+
+
+        const dot =
+            analysisStatus.querySelector(
+                ".status-dot"
+            );
+
+
+        if (dot) {
+
+            dot.classList.toggle(
+                "running",
+                running
+            );
+        }
+    }
+
+
+    /* ========================================================
+       ANALYZE BUTTON STATE
+    ======================================================== */
+
+    function setAnalysisRunning(
+        running
+    ) {
+
+        if (!analyzeBtn) {
+            return;
+        }
+
+
+        analyzeBtn.disabled =
             running;
+
 
         if (running) {
 
-            analyzeButton.dataset.originalText =
-                analyzeButton.textContent;
+            analyzeBtn.dataset.originalText =
+                analyzeBtn.textContent;
 
-            analyzeButton.textContent =
+
+            analyzeBtn.textContent =
                 "ANALYZING...";
 
         } else {
 
-            analyzeButton.textContent =
-                analyzeButton.dataset.originalText ||
+            analyzeBtn.textContent =
+                analyzeBtn.dataset.originalText ||
                 "ANALYZE CHANGE";
         }
     }
 
 
     /* ========================================================
-       RESET
-       ======================================================== */
+       ERROR
+    ======================================================== */
 
-    function resetAnalysis() {
+    function showAnalysisError(
+        message
+    ) {
 
-        selectedT1 = null;
-        selectedT2 = null;
-        currentResult = null;
-
-        hideError();
-
-        if (t1Input) {
-            t1Input.value = "";
-        }
-
-        if (t2Input) {
-            t2Input.value = "";
-        }
-
-        if (t1Preview) {
-
-            t1Preview.removeAttribute(
-                "src"
-            );
-
-            t1Preview.style.display =
-                "none";
-        }
-
-        if (t2Preview) {
-
-            t2Preview.removeAttribute(
-                "src"
-            );
-
-            t2Preview.style.display =
-                "none";
-        }
-
-        if (resultSection) {
-
-            resultSection.style.display =
-                "none";
-        }
-
-        clearCanvas(
-            changeMapCanvas
+        console.error(
+            "GeoSentinel:",
+            message
         );
 
-        clearCanvas(
-            probabilityCanvas
+
+        updateAnalysisStatus(
+            "ANALYSIS ERROR",
+            false
         );
 
-        window.scrollTo({
-            top: 0,
-            behavior: "smooth"
-        });
+
+        /*
+         * Use browser alert as a fallback because
+         * the new index.html does not contain a
+         * dedicated error element.
+         */
+
+        alert(
+            `GeoSentinel AI\n\n${message}`
+        );
     }
 
 
-    function clearCanvas(canvas) {
+    /* ========================================================
+       RESET
+    ======================================================== */
+
+    function resetAnalysis() {
+
+        currentResult =
+            null;
+
+
+        selectedSceneT1 =
+            DEFAULT_SCENE;
+
+        selectedSceneT2 =
+            DEFAULT_SCENE;
+
+
+        if (t1Select) {
+
+            t1Select.value =
+                DEFAULT_SCENE;
+        }
+
+
+        if (t2Select) {
+
+            t2Select.value =
+                DEFAULT_SCENE;
+        }
+
+
+        updateT1Preview();
+        updateT2Preview();
+
+
+        if (changePercentage) {
+
+            changePercentage.textContent =
+                "--";
+        }
+
+
+        if (changePixels) {
+
+            changePixels.textContent =
+                "--";
+        }
+
+
+        if (totalPixels) {
+
+            totalPixels.textContent =
+                "--";
+        }
+
+
+        if (threshold) {
+
+            threshold.textContent =
+                "--";
+        }
+
+
+        if (interpretationText) {
+
+            interpretationText.textContent =
+                "Waiting for analysis...";
+        }
+
+
+        if (resultSummary) {
+
+            resultSummary.textContent =
+                "GeoSentinel AI has completed the temporal comparison.";
+        }
+
+
+        clearCanvas(
+            changeCanvas
+        );
+
+
+        if (mapLoading) {
+
+            mapLoading.style.display =
+                "none";
+        }
+
+
+        updateAnalysisStatus(
+            "READY FOR AI ANALYSIS",
+            false
+        );
+    }
+
+
+    /* ========================================================
+       CLEAR CANVAS
+    ======================================================== */
+
+    function clearCanvas(
+        canvas
+    ) {
 
         if (!canvas) {
             return;
         }
 
+
         const ctx =
-            canvas.getContext("2d");
+            canvas.getContext(
+                "2d"
+            );
+
 
         ctx.clearRect(
             0,
@@ -1046,238 +1429,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     /* ========================================================
-       EVENT LISTENERS
-       ======================================================== */
+       NUMBER FORMAT
+    ======================================================== */
 
-    if (analyzeButton) {
-
-        analyzeButton.addEventListener(
-            "click",
-            (event) => {
-
-                event.preventDefault();
-
-                runAnalysis();
-            }
-        );
-    }
-
-    if (resetButton) {
-
-        resetButton.addEventListener(
-            "click",
-            (event) => {
-
-                event.preventDefault();
-
-                resetAnalysis();
-            }
-        );
-    }
-
-
-    /* ========================================================
-       DEMO BUTTONS
-       ======================================================== */
-
-    queryAll(
-        "[data-demo]"
-    ).forEach((button) => {
-
-        button.addEventListener(
-            "click",
-            () => {
-
-                loadDemoImages();
-
-                /*
-                 * Demo buttons should not automatically
-                 * run the model unless explicitly marked
-                 * with data-demo="analyze".
-                 */
-
-                if (
-                    button.dataset.demo ===
-                    "analyze"
-                ) {
-
-                    runAnalysis();
-                }
-            }
-        );
-    });
-
-
-    /* ========================================================
-       DRAG & DROP
-       ======================================================== */
-
-    function enableDropZone(
-        zone,
-        input
+    function formatNumber(
+        value
     ) {
 
-        if (!zone || !input) {
-            return;
-        }
-
-        [
-            "dragenter",
-            "dragover"
-        ].forEach(
-            (eventName) => {
-
-                zone.addEventListener(
-                    eventName,
-                    (event) => {
-
-                        event.preventDefault();
-
-                        zone.classList.add(
-                            "drag-active"
-                        );
-                    }
-                );
-            }
-        );
-
-        [
-            "dragleave",
-            "drop"
-        ].forEach(
-            (eventName) => {
-
-                zone.addEventListener(
-                    eventName,
-                    (event) => {
-
-                        event.preventDefault();
-
-                        zone.classList.remove(
-                            "drag-active"
-                        );
-                    }
-                );
-            }
-        );
-
-        zone.addEventListener(
-            "drop",
-            (event) => {
-
-                const files =
-                    event.dataTransfer.files;
-
-                if (
-                    !files ||
-                    !files.length
-                ) {
-                    return;
-                }
-
-                const file =
-                    files[0];
-
-                if (
-                    !file.type.startsWith(
-                        "image/"
-                    )
-                ) {
-
-                    showError(
-                        "Please drop an image file."
-                    );
-
-                    return;
-                }
-
-                try {
-
-                    const dataTransfer =
-                        new DataTransfer();
-
-                    dataTransfer.items.add(
-                        file
-                    );
-
-                    input.files =
-                        dataTransfer.files;
-
-                    input.dispatchEvent(
-                        new Event(
-                            "change",
-                            {
-                                bubbles: true
-                            }
-                        )
-                    );
-
-                } catch (error) {
-
-                    console.error(
-                        error
-                    );
-                }
-            }
+        return Number(
+            value
+        ).toLocaleString(
+            "en-IN"
         );
     }
 
 
-    enableDropZone(
-        $("t1DropZone") ||
-        query(".t1-drop-zone"),
-        t1Input
-    );
-
-    enableDropZone(
-        $("t2DropZone") ||
-        query(".t2-drop-zone"),
-        t2Input
-    );
-
-
     /* ========================================================
-       KEYBOARD ACCESS
-       ======================================================== */
-
-    document.addEventListener(
-        "keydown",
-        (event) => {
-
-            /*
-             * Ctrl/Cmd + Enter
-             * runs analysis.
-             */
-
-            if (
-                (event.ctrlKey ||
-                    event.metaKey) &&
-                event.key === "Enter"
-            ) {
-
-                event.preventDefault();
-
-                runAnalysis();
-            }
-
-            /*
-             * Escape
-             * closes loading/error state.
-             */
-
-            if (
-                event.key === "Escape"
-            ) {
-
-                hideLoading();
-            }
-        }
-    );
-
-
-    /* ========================================================
-       API STATUS CHECK
-       ======================================================== */
+       API STATUS
+    ======================================================== */
 
     async function checkAPIStatus() {
 
@@ -1285,23 +1454,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const response =
                 await fetch(
-                    `${API_BASE}/api/status`,
-                    {
-                        method: "GET"
-                    }
+                    `${API_BASE}/api/status`
                 );
 
+
             if (!response.ok) {
+
                 return false;
             }
 
+
             const data =
                 await response.json();
+
 
             return (
                 data.status ===
                 "online"
             );
+
 
         } catch (error) {
 
@@ -1315,8 +1486,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     /* ========================================================
-       INITIAL API CHECK
-       ======================================================== */
+       API STATUS INITIALIZATION
+    ======================================================== */
 
     checkAPIStatus()
         .then((online) => {
@@ -1325,6 +1496,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 online
                     ? "online"
                     : "offline";
+
 
             console.log(
                 online
@@ -1335,8 +1507,74 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     /* ========================================================
+       KEYBOARD ACCESS
+    ======================================================== */
+
+    document.addEventListener(
+        "keydown",
+        (event) => {
+
+            /*
+             * Ctrl/Cmd + Enter
+             * Run analysis from Page 2.
+             */
+
+            if (
+                (event.ctrlKey ||
+                    event.metaKey) &&
+                event.key === "Enter"
+            ) {
+
+                event.preventDefault();
+
+                if (
+                    page2 &&
+                    page2.classList.contains(
+                        "active-page"
+                    )
+                ) {
+
+                    runAnalysis();
+                }
+            }
+
+
+            /*
+             * Escape
+             * Return to previous page.
+             */
+
+            if (
+                event.key === "Escape"
+            ) {
+
+                if (
+                    page2 &&
+                    page2.classList.contains(
+                        "active-page"
+                    )
+                ) {
+
+                    showPage(1);
+                }
+
+                else if (
+                    page3 &&
+                    page3.classList.contains(
+                        "active-page"
+                    )
+                ) {
+
+                    showPage(2);
+                }
+            }
+        }
+    );
+
+
+    /* ========================================================
        GLOBAL ACCESS
-       ======================================================== */
+    ======================================================== */
 
     window.GeoSentinel = {
 
@@ -1344,34 +1582,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
         resetAnalysis,
 
-        loadDemoImages,
-
         checkAPIStatus,
 
         getResult: () =>
-            currentResult
+            currentResult,
+
+        showPage
     };
 
-
-    /* ========================================================
-       READY
-       ======================================================== */
-
-    console.log(
-        "=================================================="
-    );
-
-    console.log(
-        "GeoSentinel AI frontend initialized."
-    );
-
-    console.log(
-        "API:",
-        API_URL
-    );
-
-    console.log(
-        "=================================================="
-    );
 });
-```
