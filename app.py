@@ -1,3 +1,4 @@
+```python
 # ============================================================
 # GEOSENTINEL AI
 # PRODUCTION FLASK BACKEND
@@ -20,7 +21,7 @@ from tensorflow.keras import layers, Model
 
 
 # ============================================================
-# APPLICATION
+# APPLICATION PATHS
 # ============================================================
 
 BASE_DIR = os.path.dirname(
@@ -30,6 +31,11 @@ BASE_DIR = os.path.dirname(
 FRONTEND_DIR = os.path.join(
     BASE_DIR,
     "frontend"
+)
+
+ASSETS_DIR = os.path.join(
+    BASE_DIR,
+    "assets"
 )
 
 MODEL_DIR = os.path.join(
@@ -48,6 +54,10 @@ DEMO_DIR = os.path.join(
 )
 
 
+# ============================================================
+# APPLICATION
+# ============================================================
+
 app = Flask(
     __name__,
     static_folder=FRONTEND_DIR,
@@ -58,7 +68,7 @@ CORS(app)
 
 
 # ============================================================
-# PATHS
+# MODEL PATHS
 # ============================================================
 
 MODEL_PATH = os.path.join(
@@ -78,8 +88,26 @@ INFERENCE_CONFIG_PATH = os.path.join(
 
 
 # ============================================================
-# CONFIG
+# LOAD CONFIGURATION
 # ============================================================
+
+if not os.path.exists(
+    MODEL_CONFIG_PATH
+):
+
+    raise FileNotFoundError(
+        f"Model config not found: {MODEL_CONFIG_PATH}"
+    )
+
+
+if not os.path.exists(
+    INFERENCE_CONFIG_PATH
+):
+
+    raise FileNotFoundError(
+        f"Inference config not found: {INFERENCE_CONFIG_PATH}"
+    )
+
 
 with open(
     MODEL_CONFIG_PATH,
@@ -116,6 +144,10 @@ def build_shared_encoder():
         name="encoder_input"
     )
 
+    # --------------------------------------------------------
+    # Encoder Level 1
+    # --------------------------------------------------------
+
     x1 = layers.Conv2D(
         32,
         3,
@@ -144,6 +176,9 @@ def build_shared_encoder():
         name="enc_pool1"
     )(x1)
 
+    # --------------------------------------------------------
+    # Encoder Level 2
+    # --------------------------------------------------------
 
     x2 = layers.Conv2D(
         64,
@@ -173,6 +208,9 @@ def build_shared_encoder():
         name="enc_pool2"
     )(x2)
 
+    # --------------------------------------------------------
+    # Encoder Level 3
+    # --------------------------------------------------------
 
     x3 = layers.Conv2D(
         128,
@@ -202,10 +240,14 @@ def build_shared_encoder():
         name="enc_pool3"
     )(x3)
 
-
     return Model(
         inputs=encoder_input,
-        outputs=[x1, x2, x3, p3],
+        outputs=[
+            x1,
+            x2,
+            x3,
+            p3
+        ],
         name="Shared_Sentinel_Encoder"
     )
 
@@ -213,6 +255,10 @@ def build_shared_encoder():
 def build_model():
 
     encoder = build_shared_encoder()
+
+    # --------------------------------------------------------
+    # Inputs
+    # --------------------------------------------------------
 
     t1_input = layers.Input(
         shape=(256, 256, 13),
@@ -224,20 +270,36 @@ def build_model():
         name="T2_input"
     )
 
+    # --------------------------------------------------------
+    # Shared encoder
+    # --------------------------------------------------------
 
     t1 = encoder(t1_input)
+
     t2 = encoder(t2_input)
 
-
     t1_1, t1_2, t1_3, t1_p3 = t1
+
     t2_1, t2_2, t2_3, t2_p3 = t2
 
+    # --------------------------------------------------------
+    # Deep difference
+    # --------------------------------------------------------
 
     diff3 = layers.Lambda(
-        lambda z: tf.abs(z[0] - z[1]),
+        lambda z:
+            tf.abs(
+                z[0] - z[1]
+            ),
         name="difference_deep"
-    )([t1_p3, t2_p3])
+    )([
+        t1_p3,
+        t2_p3
+    ])
 
+    # --------------------------------------------------------
+    # Bottleneck
+    # --------------------------------------------------------
 
     x = layers.Conv2D(
         256,
@@ -263,6 +325,9 @@ def build_model():
         name="bottleneck_bn2"
     )(x)
 
+    # --------------------------------------------------------
+    # Decoder Level 3
+    # --------------------------------------------------------
 
     x = layers.UpSampling2D(
         (2, 2),
@@ -270,13 +335,22 @@ def build_model():
     )(x)
 
     skip3 = layers.Lambda(
-        lambda z: tf.abs(z[0] - z[1]),
+        lambda z:
+            tf.abs(
+                z[0] - z[1]
+            ),
         name="difference_skip3"
-    )([t1_3, t2_3])
+    )([
+        t1_3,
+        t2_3
+    ])
 
     x = layers.Concatenate(
         name="decoder_concat3"
-    )([x, skip3])
+    )([
+        x,
+        skip3
+    ])
 
     x = layers.Conv2D(
         128,
@@ -302,6 +376,9 @@ def build_model():
         name="decoder_l3_bn2"
     )(x)
 
+    # --------------------------------------------------------
+    # Decoder Level 2
+    # --------------------------------------------------------
 
     x = layers.UpSampling2D(
         (2, 2),
@@ -309,13 +386,22 @@ def build_model():
     )(x)
 
     skip2 = layers.Lambda(
-        lambda z: tf.abs(z[0] - z[1]),
+        lambda z:
+            tf.abs(
+                z[0] - z[1]
+            ),
         name="difference_skip2"
-    )([t1_2, t2_2])
+    )([
+        t1_2,
+        t2_2
+    ])
 
     x = layers.Concatenate(
         name="decoder_concat2"
-    )([x, skip2])
+    )([
+        x,
+        skip2
+    ])
 
     x = layers.Conv2D(
         64,
@@ -341,6 +427,9 @@ def build_model():
         name="decoder_l2_bn2"
     )(x)
 
+    # --------------------------------------------------------
+    # Decoder Level 1
+    # --------------------------------------------------------
 
     x = layers.UpSampling2D(
         (2, 2),
@@ -348,13 +437,22 @@ def build_model():
     )(x)
 
     skip1 = layers.Lambda(
-        lambda z: tf.abs(z[0] - z[1]),
+        lambda z:
+            tf.abs(
+                z[0] - z[1]
+            ),
         name="difference_skip1"
-    )([t1_1, t2_1])
+    )([
+        t1_1,
+        t2_1
+    ])
 
     x = layers.Concatenate(
         name="decoder_concat1"
-    )([x, skip1])
+    )([
+        x,
+        skip1
+    ])
 
     x = layers.Conv2D(
         32,
@@ -380,6 +478,9 @@ def build_model():
         name="decoder_l1_bn2"
     )(x)
 
+    # --------------------------------------------------------
+    # Output
+    # --------------------------------------------------------
 
     output = layers.Conv2D(
         1,
@@ -388,9 +489,11 @@ def build_model():
         name="change_probability"
     )(x)
 
-
     return Model(
-        inputs=[t1_input, t2_input],
+        inputs=[
+            t1_input,
+            t2_input
+        ],
         outputs=output,
         name="GeoSentinel_AI"
     )
@@ -407,7 +510,10 @@ print("=" * 60)
 
 print("Loading GeoSentinel AI model...")
 
-if not os.path.exists(MODEL_PATH):
+
+if not os.path.exists(
+    MODEL_PATH
+):
 
     raise FileNotFoundError(
         f"Model not found: {MODEL_PATH}"
@@ -420,7 +526,9 @@ model.load_weights(
     MODEL_PATH
 )
 
-print("GeoSentinel AI loaded successfully.")
+print(
+    "GeoSentinel AI loaded successfully."
+)
 
 print(
     "Parameters:",
@@ -441,7 +549,9 @@ def home():
     )
 
 
-@app.route("/<path:path>")
+@app.route(
+    "/<path:path>"
+)
 def frontend_files(path):
 
     return send_from_directory(
@@ -451,15 +561,37 @@ def frontend_files(path):
 
 
 # ============================================================
+# ASSETS
+# ============================================================
+
+@app.route(
+    "/assets/<path:filename>",
+    methods=["GET"]
+)
+def asset_file(filename):
+
+    return send_from_directory(
+        ASSETS_DIR,
+        filename
+    )
+
+
+# ============================================================
 # HEALTH
 # ============================================================
 
-@app.route("/health")
+@app.route(
+    "/health"
+)
 def health():
 
     return jsonify({
-        "status": "healthy",
-        "model_loaded": True
+
+        "status":
+            "healthy",
+
+        "model_loaded":
+            True
     })
 
 
@@ -467,7 +599,9 @@ def health():
 # MODEL INFO
 # ============================================================
 
-@app.route("/model-info")
+@app.route(
+    "/model-info"
+)
 def model_info():
 
     return jsonify({
@@ -479,13 +613,23 @@ def model_info():
             "TRUE SHARED-WEIGHT SIAMESE U-NET",
 
         "parameters":
-            int(model.count_params()),
+            int(
+                model.count_params()
+            ),
 
         "input_shape":
-            [256, 256, 13],
+            [
+                256,
+                256,
+                13
+            ],
 
         "output_shape":
-            [256, 256, 1],
+            [
+                256,
+                256,
+                1
+            ],
 
         "threshold":
             THRESHOLD
@@ -509,6 +653,288 @@ def demo_file(filename):
 
 
 # ============================================================
+# SHARED VALIDATION
+# ============================================================
+
+def validate_tensor(
+    tensor,
+    name
+):
+
+    expected = (
+        256,
+        256,
+        13
+    )
+
+    if not isinstance(
+        tensor,
+        list
+    ):
+
+        raise ValueError(
+            f"{name} must be a nested list."
+        )
+
+    array = np.asarray(
+        tensor,
+        dtype=np.float32
+    )
+
+    if array.shape != expected:
+
+        raise ValueError(
+            f"Invalid {name} shape. "
+            f"Received {list(array.shape)}, "
+            f"expected {list(expected)}."
+        )
+
+    if not np.all(
+        np.isfinite(array)
+    ):
+
+        raise ValueError(
+            f"{name} contains invalid numeric values."
+        )
+
+    return array
+
+
+# ============================================================
+# PREDICT
+#
+# FRONTEND ENDPOINT
+#
+# Receives:
+#
+# {
+#     "t1": [[[...13...]]],
+#     "t2": [[[...13...]]]
+# }
+#
+# Returns:
+#
+# change_percentage
+# change_pixels
+# total_pixels
+# threshold
+# change_map
+# probability_map
+# ============================================================
+
+@app.route(
+    "/predict",
+    methods=["POST"]
+)
+def predict():
+
+    try:
+
+        data = request.get_json(
+            silent=True
+        )
+
+        if not data:
+
+            return jsonify({
+
+                "status":
+                    "error",
+
+                "message":
+                    "Request body is empty or invalid JSON."
+            }), 400
+
+
+        if "t1" not in data:
+
+            return jsonify({
+
+                "status":
+                    "error",
+
+                "message":
+                    "Missing T1 data."
+            }), 400
+
+
+        if "t2" not in data:
+
+            return jsonify({
+
+                "status":
+                    "error",
+
+                "message":
+                    "Missing T2 data."
+            }), 400
+
+
+        # ====================================================
+        # VALIDATE T1
+        # ====================================================
+
+        t1 = validate_tensor(
+            data["t1"],
+            "T1"
+        )
+
+
+        # ====================================================
+        # VALIDATE T2
+        # ====================================================
+
+        t2 = validate_tensor(
+            data["t2"],
+            "T2"
+        )
+
+
+        # ====================================================
+        # ADD BATCH DIMENSION
+        # ====================================================
+
+        t1 = np.expand_dims(
+            t1,
+            axis=0
+        )
+
+        t2 = np.expand_dims(
+            t2,
+            axis=0
+        )
+
+
+        # ====================================================
+        # MODEL INFERENCE
+        # ====================================================
+
+        probability = model.predict(
+            [
+                t1,
+                t2
+            ],
+            verbose=0
+        )
+
+
+        # ====================================================
+        # PROBABILITY MAP
+        # ====================================================
+
+        probability_map = (
+            probability[0, :, :, 0]
+        )
+
+
+        # ====================================================
+        # BINARY CHANGE MASK
+        # ====================================================
+
+        change_map = (
+            probability_map >= THRESHOLD
+        ).astype(
+            np.uint8
+        )
+
+
+        # ====================================================
+        # STATISTICS
+        # ====================================================
+
+        changed_pixels = int(
+            change_map.sum()
+        )
+
+        total_pixels = int(
+            change_map.size
+        )
+
+        change_percentage = float(
+            change_map.mean() * 100
+        )
+
+
+        # ====================================================
+        # RESPONSE
+        # ====================================================
+
+        return jsonify({
+
+            "status":
+                "success",
+
+            "threshold":
+                THRESHOLD,
+
+            "shape":
+                [
+                    256,
+                    256
+                ],
+
+            "change_pixels":
+                changed_pixels,
+
+            "total_pixels":
+                total_pixels,
+
+            "change_percentage":
+                change_percentage,
+
+            "probability_min":
+                float(
+                    probability_map.min()
+                ),
+
+            "probability_max":
+                float(
+                    probability_map.max()
+                ),
+
+            "probability_map":
+                probability_map.tolist(),
+
+            "change_map":
+                change_map.tolist()
+        })
+
+
+    except ValueError as e:
+
+        print(
+            "Validation error:",
+            str(e)
+        )
+
+        return jsonify({
+
+            "status":
+                "error",
+
+            "message":
+                str(e)
+        }), 400
+
+
+    except Exception as e:
+
+        print(
+            "Prediction error:",
+            str(e)
+        )
+
+        return jsonify({
+
+            "status":
+                "error",
+
+            "message":
+                str(e)
+        }), 500
+
+
+# ============================================================
 # PREDICT NPY
 # ============================================================
 
@@ -523,7 +949,10 @@ def predict_npy():
         if "t1" not in request.files:
 
             return jsonify({
-                "status": "error",
+
+                "status":
+                    "error",
+
                 "message":
                     "Missing T1 .npy file."
             }), 400
@@ -532,7 +961,10 @@ def predict_npy():
         if "t2" not in request.files:
 
             return jsonify({
-                "status": "error",
+
+                "status":
+                    "error",
+
                 "message":
                     "Missing T2 .npy file."
             }), 400
@@ -541,13 +973,17 @@ def predict_npy():
         t1 = np.load(
             request.files["t1"],
             allow_pickle=False
-        ).astype(np.float32)
+        ).astype(
+            np.float32
+        )
 
 
         t2 = np.load(
             request.files["t2"],
             allow_pickle=False
-        ).astype(np.float32)
+        ).astype(
+            np.float32
+        )
 
 
         if t1.ndim == 3:
@@ -573,36 +1009,71 @@ def predict_npy():
         )
 
 
-        if tuple(t1.shape[1:]) != expected:
+        if tuple(
+            t1.shape[1:]
+        ) != expected:
 
             return jsonify({
-                "status": "error",
+
+                "status":
+                    "error",
+
                 "message":
                     "Invalid T1 shape.",
+
                 "received":
-                    list(t1.shape),
+                    list(
+                        t1.shape
+                    ),
+
                 "expected":
-                    [1, 256, 256, 13]
+                    [
+                        1,
+                        256,
+                        256,
+                        13
+                    ]
             }), 400
 
 
-        if tuple(t2.shape[1:]) != expected:
+        if tuple(
+            t2.shape[1:]
+        ) != expected:
 
             return jsonify({
-                "status": "error",
+
+                "status":
+                    "error",
+
                 "message":
                     "Invalid T2 shape.",
+
                 "received":
-                    list(t2.shape),
+                    list(
+                        t2.shape
+                    ),
+
                 "expected":
-                    [1, 256, 256, 13]
+                    [
+                        1,
+                        256,
+                        256,
+                        13
+                    ]
             }), 400
 
 
-        if t1.shape[0] != 1 or t2.shape[0] != 1:
+        if (
+            t1.shape[0] != 1
+            or
+            t2.shape[0] != 1
+        ):
 
             return jsonify({
-                "status": "error",
+
+                "status":
+                    "error",
+
                 "message":
                     "Upload one T1 scene and one T2 scene."
             }), 400
@@ -613,22 +1084,23 @@ def predict_npy():
         # ====================================================
 
         probability = model.predict(
-            [t1, t2],
+            [
+                t1,
+                t2
+            ],
             verbose=0
         )
-
-
-        prediction = (
-            probability >= THRESHOLD
-        ).astype(np.uint8)
 
 
         probability_map = (
             probability[0, ..., 0]
         )
 
+
         change_map = (
-            prediction[0, ..., 0]
+            probability_map >= THRESHOLD
+        ).astype(
+            np.uint8
         )
 
 
@@ -641,7 +1113,10 @@ def predict_npy():
                 THRESHOLD,
 
             "shape":
-                [256, 256],
+                [
+                    256,
+                    256
+                ],
 
             "probability_min":
                 float(
@@ -679,7 +1154,7 @@ def predict_npy():
     except Exception as e:
 
         print(
-            "Prediction error:",
+            "NPY prediction error:",
             str(e)
         )
 
@@ -697,7 +1172,9 @@ def predict_npy():
 # API STATUS
 # ============================================================
 
-@app.route("/api/status")
+@app.route(
+    "/api/status"
+)
 def api_status():
 
     return jsonify({
@@ -712,7 +1189,9 @@ def api_status():
             True,
 
         "parameters":
-            int(model.count_params()),
+            int(
+                model.count_params()
+            ),
 
         "threshold":
             THRESHOLD
@@ -736,3 +1215,4 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=port
     )
+```
