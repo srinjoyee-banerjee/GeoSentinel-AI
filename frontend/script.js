@@ -1,6 +1,7 @@
 /* ============================================================
    GEOSENTINEL AI
-   THREE-PAGE FRONTEND
+   FRONTEND SCRIPT
+   3-PAGE VERSION
    NO ASSETS FOLDER REQUIRED
    ============================================================ */
 
@@ -16,172 +17,547 @@ document.addEventListener("DOMContentLoaded", () => {
             ? "http://127.0.0.1:5000"
             : "";
 
-    const API_URL =
-        `${API_BASE}/predict`;
-
+    const API_URL = `${API_BASE}/predict`;
 
     /* ========================================================
-       DOM
+       HELPERS
     ======================================================== */
 
-    const $ =
-        (id) => document.getElementById(id);
+    const $ = id => document.getElementById(id);
 
-
-    const page1 =
-        $("page1");
-
-    const page2 =
-        $("page2");
-
-    const page3 =
-        $("page3");
-
-
-    const t1Select =
-        $("t1Select");
-
-    const t2Select =
-        $("t2Select");
-
-
-    const t1Preview =
-        $("t1Preview");
-
-    const t2Preview =
-        $("t2Preview");
-
-
-    const analysisT1 =
-        $("analysisT1");
-
-    const analysisT2 =
-        $("analysisT2");
-
-
-    const resultT1 =
-        $("resultT1");
-
-    const resultT2 =
-        $("resultT2");
-
-
-    const continueBtn =
-        $("continueBtn");
-
-    const backBtn =
-        $("backBtn");
-
-    const analyzeBtn =
-        $("analyzeBtn");
-
-    const newAnalysisBtn =
-        $("newAnalysisBtn");
-
-
-    const analysisStatus =
-        $("analysisStatus");
-
-    const errorMessage =
-        $("errorMessage");
-
-
-    const changeCanvas =
-        $("changeCanvas");
-
-    const mapLoading =
-        $("mapLoading");
-
-
-    let selectedT1 =
-        "urban_1";
-
-    let selectedT2 =
-        "urban_1";
-
-
-    let currentResult =
-        null;
-
+    const pages = {
+        1: $("page1"),
+        2: $("page2"),
+        3: $("page3")
+    };
 
     /* ========================================================
-       SCENE VISUAL CONFIGURATION
-
-       These are browser-generated satellite-style previews.
-       They do NOT require image files.
+       ELEMENTS
     ======================================================== */
 
-    const sceneConfig = {
+    const t1Preview = $("t1Preview");
+    const t2Preview = $("t2Preview");
+
+    const analysisT1 = $("analysisT1");
+    const analysisT2 = $("analysisT2");
+
+    const resultT1 = $("resultT1");
+    const resultT2 = $("resultT2");
+
+    const t1Select = $("t1Select");
+    const t2Select = $("t2Select");
+
+    const continueBtn = $("continueBtn");
+    const backBtn = $("backBtn");
+    const analyzeBtn = $("analyzeBtn");
+    const newAnalysisBtn = $("newAnalysisBtn");
+
+    const analysisStatus = $("analysisStatus");
+    const analysisStatusText =
+        analysisStatus
+            ? analysisStatus.querySelector("span")
+            : null;
+
+    const changeCanvas = $("changeCanvas");
+    const mapLoading = $("mapLoading");
+
+    const changePercentage = $("changePercentage");
+    const changePixels = $("changePixels");
+    const totalPixels = $("totalPixels");
+    const threshold = $("threshold");
+
+    const interpretationText =
+        $("interpretationText");
+
+    const resultSummary =
+        $("resultSummary");
+
+    /* ========================================================
+       STATE
+    ======================================================== */
+
+    let currentPage = 1;
+
+    let currentSceneT1 = "urban_1";
+    let currentSceneT2 = "urban_1";
+
+    let currentT1Data = null;
+    let currentT2Data = null;
+
+    let currentResult = null;
+
+    /* ========================================================
+       GENERATED SATELLITE SCENES
+       
+       IMPORTANT:
+       These are generated directly in JavaScript.
+       NO assets folder is required.
+       ======================================================== */
+
+    const SCENES = {
 
         urban_1: {
-            seed: 11,
-            title: "URBAN EXPANSION 01"
+            name: "Urban Expansion 01",
+
+            t1: {
+                buildings: 14,
+                roads: 3,
+                vegetation: 42
+            },
+
+            t2: {
+                buildings: 29,
+                roads: 5,
+                vegetation: 34
+            }
         },
 
         urban_2: {
-            seed: 27,
-            title: "URBAN EXPANSION 02"
+            name: "Urban Expansion 02",
+
+            t1: {
+                buildings: 10,
+                roads: 2,
+                vegetation: 48
+            },
+
+            t2: {
+                buildings: 23,
+                roads: 5,
+                vegetation: 38
+            }
         },
 
         urban_3: {
-            seed: 49,
-            title: "URBAN EXPANSION 03"
+            name: "Urban Expansion 03",
+
+            t1: {
+                buildings: 18,
+                roads: 4,
+                vegetation: 39
+            },
+
+            t2: {
+                buildings: 36,
+                roads: 7,
+                vegetation: 28
+            }
         }
     };
 
+    /* ========================================================
+       SVG SATELLITE IMAGE GENERATOR
+       ======================================================== */
+
+    function createSatelliteSVG(sceneKey, period) {
+
+        const scene =
+            SCENES[sceneKey] || SCENES.urban_1;
+
+        const values =
+            scene[period];
+
+        const seed =
+            sceneKey === "urban_1"
+                ? 17
+                : sceneKey === "urban_2"
+                    ? 43
+                    : 81;
+
+        let buildings = "";
+        let vegetation = "";
+        let roads = "";
+
+        /*
+         * Vegetation patches
+         */
+
+        for (
+            let i = 0;
+            i < values.vegetation;
+            i++
+        ) {
+
+            const x =
+                (i * 47 + seed * 3) % 500;
+
+            const y =
+                (i * 83 + seed * 5) % 340;
+
+            const width =
+                12 + ((i * 13) % 34);
+
+            const height =
+                10 + ((i * 17) % 25);
+
+            vegetation += `
+                <rect
+                    x="${x}"
+                    y="${y}"
+                    width="${width}"
+                    height="${height}"
+                    rx="8"
+                    fill="#193d32"
+                    opacity="0.72"
+                />
+            `;
+        }
+
+        /*
+         * Roads
+         */
+
+        for (
+            let i = 0;
+            i < values.roads;
+            i++
+        ) {
+
+            const y =
+                55 + i * 63;
+
+            roads += `
+                <path
+                    d="M 0 ${y}
+                       C 120 ${y - 20},
+                         210 ${y + 25},
+                         300 ${y}
+                       S 430 ${y - 20},
+                         520 ${y + 8}"
+                    fill="none"
+                    stroke="#858879"
+                    stroke-width="${10 + i * 2}"
+                    opacity="0.65"
+                />
+            `;
+        }
+
+        /*
+         * Buildings
+         */
+
+        for (
+            let i = 0;
+            i < values.buildings;
+            i++
+        ) {
+
+            const x =
+                25 + ((i * 71 + seed) % 455);
+
+            const y =
+                25 + ((i * 43 + seed * 2) % 295);
+
+            const width =
+                16 + ((i * 11) % 27);
+
+            const height =
+                14 + ((i * 7) % 24);
+
+            buildings += `
+                <rect
+                    x="${x}"
+                    y="${y}"
+                    width="${width}"
+                    height="${height}"
+                    rx="2"
+                    fill="#b8b7a5"
+                    opacity="0.88"
+                />
+
+                <rect
+                    x="${x + 3}"
+                    y="${y + 3}"
+                    width="${Math.max(3, width - 6)}"
+                    height="${Math.max(3, height - 6)}"
+                    fill="#6e7169"
+                    opacity="0.65"
+                />
+            `;
+        }
+
+        /*
+         * Additional urban development in T2
+         */
+
+        let development = "";
+
+        if (period === "t2") {
+
+            for (let i = 0; i < 12; i++) {
+
+                const x =
+                    50 + ((i * 91 + seed) % 400);
+
+                const y =
+                    70 + ((i * 61 + seed) % 230);
+
+                development += `
+                    <rect
+                        x="${x}"
+                        y="${y}"
+                        width="38"
+                        height="27"
+                        fill="none"
+                        stroke="#e2c46b"
+                        stroke-width="3"
+                        opacity="0.85"
+                    />
+                `;
+            }
+        }
+
+        const svg = `
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="520"
+            height="360"
+            viewBox="0 0 520 360"
+        >
+
+            <defs>
+
+                <linearGradient
+                    id="terrain"
+                    x1="0"
+                    y1="0"
+                    x2="1"
+                    y2="1"
+                >
+                    <stop
+                        offset="0%"
+                        stop-color="#162c2c"
+                    />
+
+                    <stop
+                        offset="45%"
+                        stop-color="#40504a"
+                    />
+
+                    <stop
+                        offset="100%"
+                        stop-color="#202b2a"
+                    />
+                </linearGradient>
+
+                <filter id="noise">
+
+                    <feTurbulence
+                        type="fractalNoise"
+                        baseFrequency="0.8"
+                        numOctaves="2"
+                        seed="${seed}"
+                    />
+
+                    <feColorMatrix
+                        type="saturate"
+                        values="0"
+                    />
+
+                    <feComponentTransfer>
+
+                        <feFuncA
+                            type="table"
+                            tableValues="0 0.12"
+                        />
+
+                    </feComponentTransfer>
+
+                </filter>
+
+            </defs>
+
+            <rect
+                width="520"
+                height="360"
+                fill="url(#terrain)"
+            />
+
+            <rect
+                width="520"
+                height="360"
+                filter="url(#noise)"
+                opacity="0.5"
+            />
+
+            ${vegetation}
+
+            ${roads}
+
+            ${buildings}
+
+            ${development}
+
+            <rect
+                x="0"
+                y="0"
+                width="520"
+                height="360"
+                fill="none"
+                stroke="#8ca29c"
+                stroke-width="2"
+                opacity="0.35"
+            />
+
+            <text
+                x="18"
+                y="30"
+                fill="#dce8e4"
+                font-family="Arial"
+                font-size="13"
+                letter-spacing="3"
+                opacity="0.8"
+            >
+                GEOSENTINEL AI
+            </text>
+
+            <text
+                x="18"
+                y="342"
+                fill="#dce8e4"
+                font-family="Arial"
+                font-size="11"
+                letter-spacing="2"
+                opacity="0.65"
+            >
+                ${period === "t1" ? "T1 · EARLIER OBSERVATION" : "T2 · LATER OBSERVATION"}
+            </text>
+
+        </svg>
+        `;
+
+        return (
+            "data:image/svg+xml;charset=UTF-8," +
+            encodeURIComponent(svg)
+        );
+    }
+
+    /* ========================================================
+       UPDATE ALL SCENE IMAGES
+       ======================================================== */
+
+    function updateSceneImages() {
+
+        currentSceneT1 =
+            t1Select
+                ? t1Select.value
+                : "urban_1";
+
+        currentSceneT2 =
+            t2Select
+                ? t2Select.value
+                : "urban_1";
+
+        const t1Image =
+            createSatelliteSVG(
+                currentSceneT1,
+                "t1"
+            );
+
+        const t2Image =
+            createSatelliteSVG(
+                currentSceneT2,
+                "t2"
+            );
+
+        /*
+         * PAGE 1
+         */
+
+        if (t1Preview)
+            t1Preview.src = t1Image;
+
+        if (t2Preview)
+            t2Preview.src = t2Image;
+
+        /*
+         * PAGE 2
+         */
+
+        if (analysisT1)
+            analysisT1.src = t1Image;
+
+        if (analysisT2)
+            analysisT2.src = t2Image;
+
+        /*
+         * PAGE 3
+         */
+
+        if (resultT1)
+            resultT1.src = t1Image;
+
+        if (resultT2)
+            resultT2.src = t2Image;
+
+        currentT1Data = t1Image;
+        currentT2Data = t2Image;
+    }
 
     /* ========================================================
        PAGE NAVIGATION
-    ======================================================== */
+       ======================================================== */
 
-    function showPage(number) {
+    function showPage(pageNumber) {
 
-        [page1, page2, page3]
-            .forEach((page) => {
+        currentPage = pageNumber;
 
-                if (page) {
+        Object.keys(pages).forEach(number => {
 
-                    page.classList.remove(
-                        "active-page"
-                    );
-                }
-            });
+            const page =
+                pages[number];
 
+            if (!page)
+                return;
 
-        const target =
-            $(`page${number}`);
-
-
-        if (target) {
-
-            target.classList.add(
+            page.classList.remove(
                 "active-page"
             );
+
+            page.style.display =
+                "none";
+        });
+
+        const selected =
+            pages[pageNumber];
+
+        if (selected) {
+
+            selected.style.display =
+                "block";
+
+            requestAnimationFrame(() => {
+
+                selected.classList.add(
+                    "active-page"
+                );
+
+            });
         }
 
+        /*
+         * Step indicator
+         */
 
         document
             .querySelectorAll(".step")
-            .forEach((step) => {
+            .forEach(step => {
 
                 const stepNumber =
                     Number(
                         step.dataset.step
                     );
 
-
                 step.classList.toggle(
                     "active",
-                    stepNumber === number
+                    stepNumber === pageNumber
                 );
-
 
                 step.classList.toggle(
                     "completed",
-                    stepNumber < number
+                    stepNumber < pageNumber
                 );
             });
-
 
         window.scrollTo({
             top: 0,
@@ -189,444 +565,9 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-
-    /* ========================================================
-       CANVAS SATELLITE GENERATOR
-    ======================================================== */
-
-    function generateSatellite(
-        canvas,
-        sceneKey,
-        later = false
-    ) {
-
-        if (!canvas) {
-            return;
-        }
-
-
-        const ctx =
-            canvas.getContext("2d");
-
-
-        const width =
-            canvas.width;
-
-        const height =
-            canvas.height;
-
-
-        const config =
-            sceneConfig[sceneKey];
-
-
-        if (!config) {
-            return;
-        }
-
-
-        const seed =
-            config.seed +
-            (later ? 100 : 0);
-
-
-        /*
-         * Base satellite surface.
-         */
-
-        const image =
-            ctx.createImageData(
-                width,
-                height
-            );
-
-
-        for (
-            let y = 0;
-            y < height;
-            y++
-        ) {
-
-            for (
-                let x = 0;
-                x < width;
-                x++
-            ) {
-
-                const index =
-                    (y * width + x) * 4;
-
-
-                const noise =
-                    Math.sin(
-                        x * 0.031 +
-                        seed
-                    ) *
-                    Math.cos(
-                        y * 0.027 +
-                        seed
-                    );
-
-
-                const terrain =
-                    Math.sin(
-                        (x + y) * 0.012
-                    );
-
-
-                let r =
-                    30 +
-                    noise * 14 +
-                    terrain * 9;
-
-
-                let g =
-                    55 +
-                    noise * 18 +
-                    terrain * 15;
-
-
-                let b =
-                    53 +
-                    noise * 13;
-
-
-                /*
-                 * Water regions.
-                 */
-
-                const water =
-                    (
-                        Math.sin(
-                            x * 0.017 +
-                            seed
-                        ) +
-                        Math.cos(
-                            y * 0.021 -
-                            seed
-                        )
-                    ) > 1.15;
-
-
-                if (water) {
-
-                    r = 16;
-                    g = 55;
-                    b = 72;
-                }
-
-
-                image.data[index] =
-                    Math.max(
-                        0,
-                        Math.min(
-                            255,
-                            r
-                        )
-                    );
-
-                image.data[index + 1] =
-                    Math.max(
-                        0,
-                        Math.min(
-                            255,
-                            g
-                        )
-                    );
-
-                image.data[index + 2] =
-                    Math.max(
-                        0,
-                        Math.min(
-                            255,
-                            b
-                        )
-                    );
-
-                image.data[index + 3] =
-                    255;
-            }
-        }
-
-
-        ctx.putImageData(
-            image,
-            0,
-            0
-        );
-
-
-        /*
-         * Urban structures.
-         */
-
-        const random =
-            seededRandom(seed);
-
-
-        const buildingCount =
-            later ? 115 : 82;
-
-
-        for (
-            let i = 0;
-            i < buildingCount;
-            i++
-        ) {
-
-            const x =
-                random() *
-                width;
-
-            const y =
-                random() *
-                height;
-
-
-            const size =
-                4 +
-                random() * 18;
-
-
-            ctx.fillStyle =
-                later
-                    ? "rgba(190,180,130,0.72)"
-                    : "rgba(155,150,112,0.58)";
-
-
-            ctx.fillRect(
-                x,
-                y,
-                size,
-                size * 0.65
-            );
-        }
-
-
-        /*
-         * Roads.
-         */
-
-        ctx.lineWidth = 2;
-
-        ctx.strokeStyle =
-            "rgba(210,195,155,0.28)";
-
-
-        for (
-            let i = 0;
-            i < 9;
-            i++
-        ) {
-
-            const y =
-                40 +
-                i *
-                (height / 10);
-
-
-            ctx.beginPath();
-
-            ctx.moveTo(
-                0,
-                y
-            );
-
-            ctx.lineTo(
-                width,
-                y +
-                80 *
-                Math.sin(
-                    i +
-                    seed
-                )
-            );
-
-            ctx.stroke();
-        }
-
-
-        /*
-         * Later image gets a visible expansion zone.
-         */
-
-        if (later) {
-
-            ctx.fillStyle =
-                "rgba(205,160,95,0.45)";
-
-
-            ctx.fillRect(
-                width * 0.58,
-                height * 0.28,
-                width * 0.22,
-                height * 0.30
-            );
-
-
-            ctx.strokeStyle =
-                "rgba(255,210,120,0.65)";
-
-            ctx.lineWidth = 2;
-
-            ctx.strokeRect(
-                width * 0.58,
-                height * 0.28,
-                width * 0.22,
-                height * 0.30
-            );
-        }
-
-
-        /*
-         * Satellite scan lines.
-         */
-
-        ctx.strokeStyle =
-            "rgba(255,255,255,0.025)";
-
-        ctx.lineWidth = 1;
-
-
-        for (
-            let y = 0;
-            y < height;
-            y += 8
-        ) {
-
-            ctx.beginPath();
-
-            ctx.moveTo(
-                0,
-                y
-            );
-
-            ctx.lineTo(
-                width,
-                y
-            );
-
-            ctx.stroke();
-        }
-    }
-
-
-    /* ========================================================
-       SEEDED RANDOM
-    ======================================================== */
-
-    function seededRandom(seed) {
-
-        let value =
-            seed;
-
-        return () => {
-
-            value =
-                (
-                    value * 9301 +
-                    49297
-                ) %
-                233280;
-
-            return value /
-                233280;
-        };
-    }
-
-
-    /* ========================================================
-       UPDATE SCENE
-    ======================================================== */
-
-    function updateScene() {
-
-        selectedT1 =
-            t1Select
-                ? t1Select.value
-                : "urban_1";
-
-
-        selectedT2 =
-            t2Select
-                ? t2Select.value
-                : "urban_1";
-
-
-        drawAllPreviews();
-    }
-
-
-    function drawAllPreviews() {
-
-        generateSatellite(
-            t1Preview,
-            selectedT1,
-            false
-        );
-
-
-        generateSatellite(
-            t2Preview,
-            selectedT2,
-            true
-        );
-
-
-        generateSatellite(
-            analysisT1,
-            selectedT1,
-            false
-        );
-
-
-        generateSatellite(
-            analysisT2,
-            selectedT2,
-            true
-        );
-
-
-        generateSatellite(
-            resultT1,
-            selectedT1,
-            false
-        );
-
-
-        generateSatellite(
-            resultT2,
-            selectedT2,
-            true
-        );
-    }
-
-
-    /* ========================================================
-       SELECT EVENTS
-    ======================================================== */
-
-    if (t1Select) {
-
-        t1Select.addEventListener(
-            "change",
-            updateScene
-        );
-    }
-
-
-    if (t2Select) {
-
-        t2Select.addEventListener(
-            "change",
-            updateScene
-        );
-    }
-
-
     /* ========================================================
        PAGE 1 → PAGE 2
-    ======================================================== */
+       ======================================================== */
 
     if (continueBtn) {
 
@@ -634,22 +575,22 @@ document.addEventListener("DOMContentLoaded", () => {
             "click",
             () => {
 
-                updateScene();
+                updateSceneImages();
 
-                setStatus(
-                    "READY FOR AI ANALYSIS",
-                    false
-                );
+                if (analysisStatusText) {
+
+                    analysisStatusText.textContent =
+                        "READY FOR AI ANALYSIS";
+                }
 
                 showPage(2);
             }
         );
     }
 
-
     /* ========================================================
        PAGE 2 → PAGE 1
-    ======================================================== */
+       ======================================================== */
 
     if (backBtn) {
 
@@ -662,106 +603,279 @@ document.addEventListener("DOMContentLoaded", () => {
         );
     }
 
-
     /* ========================================================
-       ANALYSIS
-    ======================================================== */
+       PAGE 2 → PAGE 3
+       ======================================================== */
 
     if (analyzeBtn) {
 
         analyzeBtn.addEventListener(
             "click",
-            runAnalysis
+            async () => {
+
+                await runAnalysis();
+            }
         );
     }
 
+    /* ========================================================
+       PAGE 3 → PAGE 1
+       ======================================================== */
+
+    if (newAnalysisBtn) {
+
+        newAnalysisBtn.addEventListener(
+            "click",
+            () => {
+
+                resetResults();
+
+                showPage(1);
+            }
+        );
+    }
+
+    /* ========================================================
+       SELECT CHANGES
+       ======================================================== */
+
+    if (t1Select) {
+
+        t1Select.addEventListener(
+            "change",
+            () => {
+
+                updateSceneImages();
+            }
+        );
+    }
+
+    if (t2Select) {
+
+        t2Select.addEventListener(
+            "change",
+            () => {
+
+                updateSceneImages();
+            }
+        );
+    }
+
+    /* ========================================================
+       DATA URL → FILE
+       ======================================================== */
+
+    async function dataURLToFile(
+        dataURL,
+        filename
+    ) {
+
+        const response =
+            await fetch(dataURL);
+
+        const blob =
+            await response.blob();
+
+        return new File(
+            [blob],
+            filename,
+            {
+                type: "image/svg+xml"
+            }
+        );
+    }
+
+    /* ========================================================
+       IMAGE → 13 CHANNEL TENSOR
+       ======================================================== */
+
+    async function imageToTensor(file) {
+
+        return new Promise(
+            (resolve, reject) => {
+
+                const image =
+                    new Image();
+
+                image.onload = () => {
+
+                    try {
+
+                        const canvas =
+                            document.createElement(
+                                "canvas"
+                            );
+
+                        canvas.width = 256;
+                        canvas.height = 256;
+
+                        const ctx =
+                            canvas.getContext(
+                                "2d",
+                                {
+                                    willReadFrequently:
+                                        true
+                                }
+                            );
+
+                        ctx.drawImage(
+                            image,
+                            0,
+                            0,
+                            256,
+                            256
+                        );
+
+                        const imageData =
+                            ctx.getImageData(
+                                0,
+                                0,
+                                256,
+                                256
+                            );
+
+                        const pixels =
+                            imageData.data;
+
+                        const tensor =
+                            new Array(256);
+
+                        for (
+                            let y = 0;
+                            y < 256;
+                            y++
+                        ) {
+
+                            tensor[y] =
+                                new Array(256);
+
+                            for (
+                                let x = 0;
+                                x < 256;
+                                x++
+                            ) {
+
+                                const i =
+                                    (
+                                        y * 256 +
+                                        x
+                                    ) * 4;
+
+                                const r =
+                                    pixels[i] / 255;
+
+                                const g =
+                                    pixels[i + 1] / 255;
+
+                                const b =
+                                    pixels[i + 2] / 255;
+
+                                tensor[y][x] = [
+
+                                    r,
+                                    g,
+                                    b,
+
+                                    (r + g) / 2,
+                                    (g + b) / 2,
+                                    (r + b) / 2,
+
+                                    Math.abs(r - g),
+                                    Math.abs(g - b),
+                                    Math.abs(r - b),
+
+                                    (r + g + b) / 3,
+
+                                    r * r,
+                                    g * g,
+                                    b * b
+                                ];
+                            }
+                        }
+
+                        resolve(tensor);
+
+                    } catch (error) {
+
+                        reject(error);
+                    }
+                };
+
+                image.onerror = () => {
+
+                    reject(
+                        new Error(
+                            "Unable to process satellite scene."
+                        )
+                    );
+                };
+
+                image.src =
+                    URL.createObjectURL(file);
+            }
+        );
+    }
+
+    /* ========================================================
+       RUN AI ANALYSIS
+       ======================================================== */
 
     async function runAnalysis() {
 
-        hideError();
+        if (analyzeBtn) {
 
-        setAnalysisRunning(
-            true
-        );
+            analyzeBtn.disabled = true;
 
-
-        setStatus(
-            "RUNNING AI CHANGE DETECTION...",
-            true
-        );
-
-
-        if (mapLoading) {
-
-            mapLoading.style.display =
-                "flex";
+            analyzeBtn.innerHTML =
+                "ANALYZING... <span>✦</span>";
         }
 
+        if (analysisStatusText) {
+
+            analysisStatusText.textContent =
+                "RUNNING AI CHANGE DETECTION...";
+        }
 
         try {
 
             /*
-             * Generate actual 256x256 RGB images
-             * from the same visual scene.
+             * Generate the current scenes.
              */
 
-            const t1Canvas =
-                document.createElement(
-                    "canvas"
-                );
-
-            const t2Canvas =
-                document.createElement(
-                    "canvas"
-                );
-
-
-            t1Canvas.width =
-                256;
-
-            t1Canvas.height =
-                256;
-
-
-            t2Canvas.width =
-                256;
-
-            t2Canvas.height =
-                256;
-
-
-            generateSatellite(
-                t1Canvas,
-                selectedT1,
-                false
-            );
-
-
-            generateSatellite(
-                t2Canvas,
-                selectedT2,
-                true
-            );
-
+            updateSceneImages();
 
             /*
-             * Convert to 13-channel representation.
+             * Convert generated SVG images to files.
              */
 
-            const t1 =
-                canvasToTensor(
-                    t1Canvas
+            const t1File =
+                await dataURLToFile(
+                    currentT1Data,
+                    "T1_scene.svg"
                 );
 
-
-            const t2 =
-                canvasToTensor(
-                    t2Canvas
+            const t2File =
+                await dataURLToFile(
+                    currentT2Data,
+                    "T2_scene.svg"
                 );
-
 
             /*
-             * Backend request.
+             * Build tensors.
+             */
+
+            const t1Tensor =
+                await imageToTensor(
+                    t1File
+                );
+
+            const t2Tensor =
+                await imageToTensor(
+                    t2File
+                );
+
+            /*
+             * Send to Flask.
              */
 
             const response =
@@ -775,28 +889,39 @@ document.addEventListener("DOMContentLoaded", () => {
                                 "application/json"
                         },
 
-                        body:
-                            JSON.stringify({
-                                t1,
-                                t2
-                            })
+                        body: JSON.stringify({
+
+                            t1:
+                                t1Tensor,
+
+                            t2:
+                                t2Tensor
+                        })
                     }
                 );
 
+            let data;
 
-            const data =
-                await response.json();
+            try {
 
+                data =
+                    await response.json();
+
+            } catch {
+
+                throw new Error(
+                    "GeoSentinel backend returned an invalid response."
+                );
+            }
 
             if (!response.ok) {
 
                 throw new Error(
-                    data.message ||
                     data.error ||
+                    data.message ||
                     "GeoSentinel AI analysis failed."
                 );
             }
-
 
             if (
                 data.status &&
@@ -805,159 +930,84 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 throw new Error(
                     data.message ||
-                    "The model returned an error."
+                    "The AI model returned an error."
                 );
             }
 
+            currentResult = data;
 
-            currentResult =
-                data;
+            displayResults(data);
 
-
-            displayResults(
-                data
-            );
-
+            /*
+             * Move to PAGE 3.
+             */
 
             showPage(3);
 
+            if (analysisStatusText) {
+
+                analysisStatusText.textContent =
+                    "ANALYSIS COMPLETE";
+            }
 
         } catch (error) {
 
             console.error(
-                "GeoSentinel error:",
+                "GeoSentinel analysis error:",
                 error
             );
 
+            /*
+             * Do NOT use alert().
+             * Show the error inside the interface.
+             */
 
-            showError(
-                error.message ||
-                "Unable to connect to GeoSentinel AI."
+            if (analysisStatusText) {
+
+                analysisStatusText.textContent =
+                    "ANALYSIS ERROR · " +
+                    error.message;
+            }
+
+            console.error(
+                "Backend error:",
+                error.message
             );
-
 
         } finally {
 
-            setAnalysisRunning(
-                false
-            );
+            if (analyzeBtn) {
 
+                analyzeBtn.disabled =
+                    false;
 
-            if (mapLoading) {
-
-                mapLoading.style.display =
-                    "none";
+                analyzeBtn.innerHTML =
+                    "ANALYZE CHANGE <span>✦</span>";
             }
         }
     }
-
-
-    /* ========================================================
-       CANVAS → 13 CHANNEL TENSOR
-    ======================================================== */
-
-    function canvasToTensor(
-        canvas
-    ) {
-
-        const ctx =
-            canvas.getContext(
-                "2d",
-                {
-                    willReadFrequently:
-                        true
-                }
-            );
-
-
-        const imageData =
-            ctx.getImageData(
-                0,
-                0,
-                256,
-                256
-            );
-
-
-        const pixels =
-            imageData.data;
-
-
-        const tensor =
-            new Array(256);
-
-
-        for (
-            let y = 0;
-            y < 256;
-            y++
-        ) {
-
-            tensor[y] =
-                new Array(256);
-
-
-            for (
-                let x = 0;
-                x < 256;
-                x++
-            ) {
-
-                const i =
-                    (y * 256 + x) * 4;
-
-
-                const r =
-                    pixels[i] / 255;
-
-                const g =
-                    pixels[i + 1] / 255;
-
-                const b =
-                    pixels[i + 2] / 255;
-
-
-                tensor[y][x] = [
-
-                    r,
-                    g,
-                    b,
-
-                    (r + g) / 2,
-
-                    (g + b) / 2,
-
-                    (r + b) / 2,
-
-                    Math.abs(r - g),
-
-                    Math.abs(g - b),
-
-                    Math.abs(r - b),
-
-                    (r + g + b) / 3,
-
-                    r * r,
-
-                    g * g,
-
-                    b * b
-                ];
-            }
-        }
-
-
-        return tensor;
-    }
-
 
     /* ========================================================
        DISPLAY RESULTS
-    ======================================================== */
+       ======================================================== */
 
-    function displayResults(
-        data
-    ) {
+    function displayResults(data) {
+
+        /*
+         * Before / after images
+         */
+
+        if (resultT1)
+            resultT1.src =
+                currentT1Data;
+
+        if (resultT2)
+            resultT2.src =
+                currentT2Data;
+
+        /*
+         * Change percentage
+         */
 
         const percentage =
             Number(
@@ -966,142 +1016,147 @@ document.addEventListener("DOMContentLoaded", () => {
                 0
             );
 
+        if (changePercentage) {
 
-        const changed =
-            Number(
-                data.change_pixels ??
-                0
-            );
-
-
-        const total =
-            Number(
-                data.total_pixels ??
-                256 * 256
-            );
-
-
-        const thresholdValue =
-            Number(
-                data.threshold ??
-                0.60
-            );
-
-
-        if ($("changePercentage")) {
-
-            $("changePercentage")
-                .textContent =
-                `${percentage.toFixed(2)}%`;
+            changePercentage.textContent =
+                percentage.toFixed(2) + "%";
         }
 
+        /*
+         * Changed pixels
+         */
 
-        if ($("changePixels")) {
+        if (changePixels) {
 
-            $("changePixels")
-                .textContent =
+            changePixels.textContent =
                 formatNumber(
-                    changed
+                    data.change_pixels ??
+                    0
                 );
         }
 
+        /*
+         * Total pixels
+         */
 
-        if ($("totalPixels")) {
+        if (totalPixels) {
 
-            $("totalPixels")
-                .textContent =
+            totalPixels.textContent =
                 formatNumber(
-                    total
+                    data.total_pixels ??
+                    65536
                 );
         }
 
-
-        if ($("threshold")) {
-
-            $("threshold")
-                .textContent =
-                thresholdValue
-                    .toFixed(2);
-        }
-
-
         /*
-         * Change map.
+         * Threshold
          */
 
-        if (
-            data.change_map &&
-            changeCanvas
-        ) {
+        if (threshold) {
 
-            renderChangeMap(
-                data.change_map,
-                thresholdValue
-            );
-
-        } else {
-
-            /*
-             * If backend does not return a map,
-             * create a visual demonstration map
-             * from the two generated scenes.
-             */
-
-            generateDemoChangeMap();
+            threshold.textContent =
+                Number(
+                    data.threshold ??
+                    0.60
+                ).toFixed(2);
         }
 
-
         /*
-         * Interpretation.
+         * Summary
          */
 
-        if ($("interpretationText")) {
+        if (resultSummary) {
 
-            $("interpretationText")
-                .textContent =
-                interpretation(
+            resultSummary.textContent =
+                `GeoSentinel AI completed the temporal comparison for ${SCENES[currentSceneT1].name}.`;
+        }
+
+        /*
+         * Interpretation
+         */
+
+        if (interpretationText) {
+
+            interpretationText.textContent =
+                generateInterpretation(
                     percentage
                 );
         }
 
+        /*
+         * Change map
+         */
 
-        if ($("resultSummary")) {
+        if (data.change_map) {
 
-            $("resultSummary")
-                .textContent =
-                `GeoSentinel AI completed the temporal comparison for ${sceneConfig[selectedT1].title}.`;
+            renderChangeMap(
+                data.change_map
+            );
+
+        } else {
+
+            generateFallbackChangeMap(
+                percentage
+            );
         }
+
+        if (mapLoading)
+            mapLoading.style.display =
+                "none";
     }
 
+    /* ========================================================
+       INTERPRETATION
+       ======================================================== */
+
+    function generateInterpretation(
+        percentage
+    ) {
+
+        if (percentage < 5) {
+
+            return (
+                "Low-intensity change detected. " +
+                "The selected area shows limited spatial differences " +
+                "between the earlier and later observations."
+            );
+        }
+
+        if (percentage < 20) {
+
+            return (
+                "Moderate spatial change detected. " +
+                "The temporal comparison indicates localized development " +
+                "or land-cover transitions within the observed scene."
+            );
+        }
+
+        return (
+            "Significant spatial change detected. " +
+            "The comparison indicates substantial development or " +
+            "land-cover transformation between T1 and T2."
+        );
+    }
 
     /* ========================================================
        CHANGE MAP
-    ======================================================== */
+       ======================================================== */
 
-    function renderChangeMap(
-        map,
-        thresholdValue
-    ) {
+    function renderChangeMap(map) {
+
+        if (!changeCanvas || !map)
+            return;
 
         const height =
             map.length;
 
-
         const width =
-            map[0]?.length ||
-            0;
+            map[0]
+                ? map[0].length
+                : 0;
 
-
-        if (
-            !width ||
-            !height
-        ) {
-
-            generateDemoChangeMap();
-
+        if (!width || !height)
             return;
-        }
-
 
         changeCanvas.width =
             width;
@@ -1109,19 +1164,14 @@ document.addEventListener("DOMContentLoaded", () => {
         changeCanvas.height =
             height;
 
-
         const ctx =
-            changeCanvas.getContext(
-                "2d"
-            );
+            changeCanvas.getContext("2d");
 
-
-        const image =
+        const imageData =
             ctx.createImageData(
                 width,
                 height
             );
-
 
         for (
             let y = 0;
@@ -1138,417 +1188,208 @@ document.addEventListener("DOMContentLoaded", () => {
                 const value =
                     Number(
                         map[y][x]
-                    );
+                    ) >= 0.5;
 
+                const index =
+                    (
+                        y * width +
+                        x
+                    ) * 4;
 
-                const changed =
-                    value >=
-                    thresholdValue;
+                if (value) {
 
+                    /*
+                     * Detected change
+                     */
 
-                const i =
-                    (y * width + x) * 4;
-
-
-                if (changed) {
-
-                    image.data[i] =
+                    imageData.data[index] =
                         255;
 
-                    image.data[i + 1] =
-                        76;
+                    imageData.data[index + 1] =
+                        75;
 
-                    image.data[i + 2] =
-                        76;
+                    imageData.data[index + 2] =
+                        70;
 
                 } else {
 
-                    image.data[i] =
+                    /*
+                     * No change
+                     */
+
+                    imageData.data[index] =
                         12;
 
-                    image.data[i + 1] =
-                        26;
+                    imageData.data[index + 1] =
+                        27;
 
-                    image.data[i + 2] =
-                        34;
+                    imageData.data[index + 2] =
+                        32;
                 }
 
-
-                image.data[i + 3] =
+                imageData.data[index + 3] =
                     255;
             }
         }
 
-
         ctx.putImageData(
-            image,
+            imageData,
             0,
             0
         );
+
+        changeCanvas.style.display =
+            "block";
     }
 
-
     /* ========================================================
-       DEMO CHANGE MAP FALLBACK
-    ======================================================== */
+       FALLBACK CHANGE MAP
+       
+       Used only if backend does not return change_map.
+       ======================================================== */
 
-    function generateDemoChangeMap() {
+    function generateFallbackChangeMap(
+        percentage
+    ) {
 
-        const canvas =
-            changeCanvas;
+        if (!changeCanvas)
+            return;
 
+        const size = 256;
+
+        changeCanvas.width =
+            size;
+
+        changeCanvas.height =
+            size;
 
         const ctx =
-            canvas.getContext(
+            changeCanvas.getContext(
                 "2d"
             );
 
+        ctx.clearRect(
+            0,
+            0,
+            size,
+            size
+        );
 
-        const width =
-            canvas.width;
-
-        const height =
-            canvas.height;
-
+        /*
+         * Dark base.
+         */
 
         ctx.fillStyle =
-            "#0b1a22";
-
+            "#0c1b20";
 
         ctx.fillRect(
             0,
             0,
-            width,
-            height
+            size,
+            size
         );
 
-
         /*
-         * Existing area.
+         * Development zones.
          */
 
-        ctx.fillStyle =
-            "rgba(75,110,110,0.55)";
-
+        const zones =
+            Math.max(
+                4,
+                Math.round(
+                    percentage / 3
+                )
+            );
 
         for (
             let i = 0;
-            i < 55;
+            i < zones;
             i++
         ) {
 
             const x =
-                (i * 47) %
-                width;
+                (i * 47) % 220;
 
             const y =
-                (i * 83) %
-                height;
+                (i * 71) % 220;
 
+            const w =
+                15 +
+                ((i * 13) % 40);
+
+            const h =
+                12 +
+                ((i * 17) % 35);
+
+            ctx.fillStyle =
+                "rgba(255,75,70,0.85)";
 
             ctx.fillRect(
                 x,
                 y,
-                12 +
-                (i % 4) * 8,
-                8 +
-                (i % 3) * 6
+                w,
+                h
             );
         }
 
-
-        /*
-         * Changed urban expansion.
-         */
-
-        ctx.fillStyle =
-            "rgba(255,72,72,0.85)";
-
-
-        ctx.fillRect(
-            width * 0.56,
-            height * 0.25,
-            width * 0.25,
-            height * 0.38
-        );
-
-
-        ctx.fillStyle =
-            "rgba(255,110,80,0.7)";
-
-
-        for (
-            let i = 0;
-            i < 18;
-            i++
-        ) {
-
-            ctx.fillRect(
-                width * 0.48 +
-                (i % 6) * 12,
-
-                height * 0.2 +
-                Math.floor(i / 6) * 18,
-
-                9,
-                9
-            );
-        }
+        changeCanvas.style.display =
+            "block";
     }
-
-
-    /* ========================================================
-       INTERPRETATION
-    ======================================================== */
-
-    function interpretation(
-        percentage
-    ) {
-
-        if (percentage <= 1) {
-
-            return (
-                "Very limited surface change was detected. The observed area remains largely stable between the two temporal observations."
-            );
-        }
-
-
-        if (percentage <= 5) {
-
-            return (
-                "Localized spatial change was detected. Only a small portion of the observed scene shows measurable transformation."
-            );
-        }
-
-
-        if (percentage <= 15) {
-
-            return (
-                "Moderate spatial change was detected. The affected regions indicate noticeable land-surface transformation between T1 and T2."
-            );
-        }
-
-
-        if (percentage <= 30) {
-
-            return (
-                "Significant spatial change was detected across the scene. The spatial distribution suggests substantial land-surface transformation."
-            );
-        }
-
-
-        return (
-            "Extensive spatial change was detected. A large proportion of the observed area has undergone measurable transformation between the two observations."
-        );
-    }
-
-
-    /* ========================================================
-       STATUS
-    ======================================================== */
-
-    function setStatus(
-        message,
-        running
-    ) {
-
-        if (!analysisStatus) {
-            return;
-        }
-
-
-        const text =
-            analysisStatus.querySelector(
-                "span"
-            );
-
-
-        if (text) {
-
-            text.textContent =
-                message;
-        }
-
-
-        const dot =
-            analysisStatus.querySelector(
-                ".status-dot"
-            );
-
-
-        if (dot) {
-
-            dot.classList.toggle(
-                "running",
-                running
-            );
-        }
-    }
-
-
-    /* ========================================================
-       ANALYSIS BUTTON
-    ======================================================== */
-
-    function setAnalysisRunning(
-        running
-    ) {
-
-        if (!analyzeBtn) {
-            return;
-        }
-
-
-        analyzeBtn.disabled =
-            running;
-
-
-        if (running) {
-
-            analyzeBtn.innerHTML =
-                "ANALYZING...";
-
-
-        } else {
-
-            analyzeBtn.innerHTML =
-                "ANALYZE CHANGE <span>✦</span>";
-        }
-    }
-
-
-    /* ========================================================
-       ERROR
-    ======================================================== */
-
-    function hideError() {
-
-        if (!errorMessage) {
-            return;
-        }
-
-
-        errorMessage.style.display =
-            "none";
-
-
-        errorMessage.textContent =
-            "";
-    }
-
-
-    function showError(
-        message
-    ) {
-
-        setStatus(
-            "ANALYSIS ERROR",
-            false
-        );
-
-
-        if (errorMessage) {
-
-            errorMessage.textContent =
-                message;
-
-            errorMessage.style.display =
-                "block";
-        }
-
-
-        setAnalysisRunning(
-            false
-        );
-    }
-
 
     /* ========================================================
        RESET
-    ======================================================== */
+       ======================================================== */
 
-    if (newAnalysisBtn) {
+    function resetResults() {
 
-        newAnalysisBtn.addEventListener(
-            "click",
-            () => {
+        currentResult =
+            null;
 
-                selectedT1 =
-                    "urban_1";
+        if (changePercentage)
+            changePercentage.textContent =
+                "--";
 
-                selectedT2 =
-                    "urban_1";
+        if (changePixels)
+            changePixels.textContent =
+                "--";
 
+        if (totalPixels)
+            totalPixels.textContent =
+                "--";
 
-                if (t1Select) {
+        if (threshold)
+            threshold.textContent =
+                "--";
 
-                    t1Select.value =
-                        "urban_1";
-                }
+        if (interpretationText)
+            interpretationText.textContent =
+                "Waiting for analysis...";
 
+        if (resultSummary)
+            resultSummary.textContent =
+                "GeoSentinel AI has completed the temporal comparison.";
 
-                if (t2Select) {
+        if (changeCanvas) {
 
-                    t2Select.value =
-                        "urban_1";
-                }
+            const ctx =
+                changeCanvas.getContext(
+                    "2d"
+                );
 
-
-                if ($("changePercentage")) {
-
-                    $("changePercentage")
-                        .textContent =
-                        "--";
-                }
-
-
-                if ($("changePixels")) {
-
-                    $("changePixels")
-                        .textContent =
-                        "--";
-                }
-
-
-                if ($("totalPixels")) {
-
-                    $("totalPixels")
-                        .textContent =
-                        "--";
-                }
-
-
-                if ($("threshold")) {
-
-                    $("threshold")
-                        .textContent =
-                        "--";
-                }
-
-
-                if ($("interpretationText")) {
-
-                    $("interpretationText")
-                        .textContent =
-                        "Waiting for analysis...";
-                }
-
-
-                drawAllPreviews();
-
-                showPage(1);
-            }
-        );
+            ctx.clearRect(
+                0,
+                0,
+                changeCanvas.width,
+                changeCanvas.height
+            );
+        }
     }
 
-
     /* ========================================================
-       FORMAT NUMBERS
-    ======================================================== */
+       NUMBER FORMAT
+       ======================================================== */
 
-    function formatNumber(
-        value
-    ) {
+    function formatNumber(value) {
 
         return Number(
             value
@@ -1557,76 +1398,110 @@ document.addEventListener("DOMContentLoaded", () => {
         );
     }
 
-
     /* ========================================================
-       KEYBOARD
-    ======================================================== */
+       API STATUS
+       ======================================================== */
 
-    document.addEventListener(
-        "keydown",
-        (event) => {
+    async function checkAPIStatus() {
 
-            if (
-                (event.ctrlKey ||
-                    event.metaKey) &&
-                event.key === "Enter"
-            ) {
+        try {
 
-                if (
-                    page2 &&
-                    page2.classList.contains(
-                        "active-page"
-                    )
-                ) {
+            const response =
+                await fetch(
+                    `${API_BASE}/api/status`
+                );
 
-                    runAnalysis();
-                }
-            }
+            if (!response.ok)
+                return false;
 
+            const data =
+                await response.json();
 
-            if (
-                event.key === "Escape"
-            ) {
+            return (
+                data.status ===
+                "online"
+            );
 
-                if (
-                    page2 &&
-                    page2.classList.contains(
-                        "active-page"
-                    )
-                ) {
+        } catch {
 
-                    showPage(1);
-                }
-
-                else if (
-                    page3 &&
-                    page3.classList.contains(
-                        "active-page"
-                    )
-                ) {
-
-                    showPage(2);
-                }
-            }
+            return false;
         }
-    );
+    }
 
+    checkAPIStatus()
+        .then(online => {
+
+            document.body.dataset.api =
+                online
+                    ? "online"
+                    : "offline";
+
+            console.log(
+                online
+                    ? "✓ GeoSentinel AI API online"
+                    : "⚠ GeoSentinel AI API unavailable"
+            );
+        });
 
     /* ========================================================
-       INITIALIZATION
-    ======================================================== */
+       INITIALIZE
+       ======================================================== */
 
-    drawAllPreviews();
+    /*
+     * Start on PAGE 1.
+     */
 
     showPage(1);
 
+    /*
+     * Generate images immediately.
+     */
+
+    updateSceneImages();
 
     console.log(
-        "GeoSentinel AI — 3 page interface ready."
+        "=================================================="
     );
 
     console.log(
-        "No external image assets required."
+        "GeoSentinel AI frontend initialized."
     );
+
+    console.log(
+        "3-page interface ready."
+    );
+
+    console.log(
+        "No assets folder required."
+    );
+
+    console.log(
+        "API:",
+        API_URL
+    );
+
+    console.log(
+        "=================================================="
+    );
+
+    /* ========================================================
+       GLOBAL ACCESS
+       ======================================================== */
+
+    window.GeoSentinel = {
+
+        runAnalysis,
+
+        resetResults,
+
+        showPage,
+
+        updateSceneImages,
+
+        checkAPIStatus,
+
+        getResult: () =>
+            currentResult
+    };
 
 });
