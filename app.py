@@ -8,15 +8,8 @@ import json
 import numpy as np
 import tensorflow as tf
 
-from flask import (
-    Flask,
-    request,
-    jsonify,
-    send_from_directory
-)
-
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
-
 from tensorflow.keras import layers, Model
 
 
@@ -29,6 +22,7 @@ app = Flask(
     static_folder="frontend",
     static_url_path=""
 )
+
 CORS(app)
 
 
@@ -36,19 +30,10 @@ CORS(app)
 # PATHS
 # ============================================================
 
-BASE_DIR = os.path.dirname(
-    os.path.abspath(__file__)
-)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-MODEL_DIR = os.path.join(
-    BASE_DIR,
-    "model"
-)
-
-CONFIG_DIR = os.path.join(
-    BASE_DIR,
-    "config"
-)
+MODEL_DIR = os.path.join(BASE_DIR, "model")
+CONFIG_DIR = os.path.join(BASE_DIR, "config")
 
 MODEL_PATH = os.path.join(
     MODEL_DIR,
@@ -67,30 +52,17 @@ INFERENCE_CONFIG_PATH = os.path.join(
 
 
 # ============================================================
-# LOAD CONFIGURATION
+# CONFIGURATION
 # ============================================================
 
-with open(
-    MODEL_CONFIG_PATH,
-    "r"
-) as f:
-
+with open(MODEL_CONFIG_PATH, "r") as f:
     MODEL_CONFIG = json.load(f)
 
-
-with open(
-    INFERENCE_CONFIG_PATH,
-    "r"
-) as f:
-
+with open(INFERENCE_CONFIG_PATH, "r") as f:
     INFERENCE_CONFIG = json.load(f)
 
-
 THRESHOLD = float(
-    INFERENCE_CONFIG.get(
-        "threshold",
-        0.60
-    )
+    INFERENCE_CONFIG.get("threshold", 0.60)
 )
 
 
@@ -106,7 +78,6 @@ def build_shared_encoder():
     )
 
     # LEVEL 1
-
     x1 = layers.Conv2D(
         32,
         3,
@@ -135,9 +106,7 @@ def build_shared_encoder():
         name="enc_pool1"
     )(x1)
 
-
     # LEVEL 2
-
     x2 = layers.Conv2D(
         64,
         3,
@@ -166,9 +135,7 @@ def build_shared_encoder():
         name="enc_pool2"
     )(x2)
 
-
     # LEVEL 3
-
     x3 = layers.Conv2D(
         128,
         3,
@@ -197,27 +164,20 @@ def build_shared_encoder():
         name="enc_pool3"
     )(x3)
 
-
     return Model(
         inputs=encoder_input,
-        outputs=[
-            x1,
-            x2,
-            x3,
-            p3
-        ],
+        outputs=[x1, x2, x3, p3],
         name="Shared_Sentinel_Encoder"
     )
 
 
 # ============================================================
-# BUILD EXACT GEOSENTINEL MODEL
+# GEOSENTINEL MODEL
 # ============================================================
 
 def build_model():
 
     shared_encoder = build_shared_encoder()
-
 
     input_t1 = layers.Input(
         shape=(256, 256, 13),
@@ -229,38 +189,19 @@ def build_model():
         name="T2_input"
     )
 
-
-    t1_features = shared_encoder(
-        input_t1
-    )
-
-    t2_features = shared_encoder(
-        input_t2
-    )
-
+    t1_features = shared_encoder(input_t1)
+    t2_features = shared_encoder(input_t2)
 
     t1_1, t1_2, t1_3, t1_p3 = t1_features
     t2_1, t2_2, t2_3, t2_p3 = t2_features
 
-
-    # --------------------------------------------------------
     # TEMPORAL DIFFERENCE
-    # --------------------------------------------------------
-
     diff3 = layers.Lambda(
-        lambda z: tf.abs(
-            z[0] - z[1]
-        ),
+        lambda z: tf.abs(z[0] - z[1]),
         name="difference_deep"
-    )(
-        [t1_p3, t2_p3]
-    )
+    )([t1_p3, t2_p3])
 
-
-    # --------------------------------------------------------
     # BOTTLENECK
-    # --------------------------------------------------------
-
     x = layers.Conv2D(
         256,
         3,
@@ -285,30 +226,20 @@ def build_model():
         name="bottleneck_bn2"
     )(x)
 
-
-    # --------------------------------------------------------
     # DECODER LEVEL 3
-    # --------------------------------------------------------
-
     x = layers.UpSampling2D(
         size=(2, 2),
         name="decoder_up3"
     )(x)
 
     skip3 = layers.Lambda(
-        lambda z: tf.abs(
-            z[0] - z[1]
-        ),
+        lambda z: tf.abs(z[0] - z[1]),
         name="difference_skip3"
-    )(
-        [t1_3, t2_3]
-    )
+    )([t1_3, t2_3])
 
     x = layers.Concatenate(
         name="decoder_concat3"
-    )(
-        [x, skip3]
-    )
+    )([x, skip3])
 
     x = layers.Conv2D(
         128,
@@ -334,30 +265,20 @@ def build_model():
         name="decoder_l3_bn2"
     )(x)
 
-
-    # --------------------------------------------------------
     # DECODER LEVEL 2
-    # --------------------------------------------------------
-
     x = layers.UpSampling2D(
         size=(2, 2),
         name="decoder_up2"
     )(x)
 
     skip2 = layers.Lambda(
-        lambda z: tf.abs(
-            z[0] - z[1]
-        ),
+        lambda z: tf.abs(z[0] - z[1]),
         name="difference_skip2"
-    )(
-        [t1_2, t2_2]
-    )
+    )([t1_2, t2_2])
 
     x = layers.Concatenate(
         name="decoder_concat2"
-    )(
-        [x, skip2]
-    )
+    )([x, skip2])
 
     x = layers.Conv2D(
         64,
@@ -383,30 +304,20 @@ def build_model():
         name="decoder_l2_bn2"
     )(x)
 
-
-    # --------------------------------------------------------
     # DECODER LEVEL 1
-    # --------------------------------------------------------
-
     x = layers.UpSampling2D(
         size=(2, 2),
         name="decoder_up1"
     )(x)
 
     skip1 = layers.Lambda(
-        lambda z: tf.abs(
-            z[0] - z[1]
-        ),
+        lambda z: tf.abs(z[0] - z[1]),
         name="difference_skip1"
-    )(
-        [t1_1, t2_1]
-    )
+    )([t1_1, t2_1])
 
     x = layers.Concatenate(
         name="decoder_concat1"
-    )(
-        [x, skip1]
-    )
+    )([x, skip1])
 
     x = layers.Conv2D(
         32,
@@ -432,11 +343,7 @@ def build_model():
         name="decoder_l1_bn2"
     )(x)
 
-
-    # --------------------------------------------------------
     # OUTPUT
-    # --------------------------------------------------------
-
     output = layers.Conv2D(
         1,
         kernel_size=1,
@@ -444,47 +351,37 @@ def build_model():
         name="change_probability"
     )(x)
 
-
     return Model(
-        inputs=[
-            input_t1,
-            input_t2
-        ],
+        inputs=[input_t1, input_t2],
         outputs=output,
         name="GeoSentinel_AI"
     )
 
 
 # ============================================================
-# LOAD MODEL ONCE
+# MODEL LOADING
 # ============================================================
+
+print("============================================================")
+print("GEOSENTINEL AI")
+print("Starting production backend...")
+print("============================================================")
 
 print("Loading GeoSentinel AI model...")
 
 model = build_model()
 
-model.load_weights(
-    MODEL_PATH
-)
+model.load_weights(MODEL_PATH)
 
-print(
-    "GeoSentinel AI loaded successfully."
-)
-
-print(
-    "Parameters:",
-    model.count_params()
-)
+print("GeoSentinel AI loaded successfully.")
+print("Parameters:", model.count_params())
 
 
 # ============================================================
-# HEALTH ENDPOINT
+# FRONTEND
 # ============================================================
 
-@app.route(
-    "/",
-    methods=["GET"]
-)
+@app.route("/", methods=["GET"])
 def home():
 
     return send_from_directory(
@@ -494,13 +391,10 @@ def home():
 
 
 # ============================================================
-# HEALTH CHECK
+# HEALTH
 # ============================================================
 
-@app.route(
-    "/health",
-    methods=["GET"]
-)
+@app.route("/health", methods=["GET"])
 def health():
 
     return jsonify({
@@ -513,61 +407,47 @@ def health():
 # MODEL INFORMATION
 # ============================================================
 
-@app.route(
-    "/model-info",
-    methods=["GET"]
-)
+@app.route("/model-info", methods=["GET"])
 def model_info():
 
     return jsonify({
         "name": "GeoSentinel AI",
-        "architecture":
-            "TRUE SHARED-WEIGHT SIAMESE U-NET",
-        "parameters":
-            int(model.count_params()),
-        "input_shape":
-            [256, 256, 13],
-        "output_shape":
-            [256, 256, 1],
-        "threshold":
-            THRESHOLD
+        "architecture": "TRUE SHARED-WEIGHT SIAMESE U-NET",
+        "parameters": int(model.count_params()),
+        "input_shape": [256, 256, 13],
+        "output_shape": [256, 256, 1],
+        "threshold": THRESHOLD
     })
 
 
 # ============================================================
-# CHANGE DETECTION
+# JSON PREDICTION
 # ============================================================
 
-@app.route(
-    "/predict",
-    methods=["POST"]
-)
+@app.route("/predict", methods=["POST"])
 def predict():
 
     try:
 
-        data = request.get_json()
+        data = request.get_json(silent=True)
 
         if data is None:
             return jsonify({
-                "error":
-                    "Request body must contain JSON."
+                "status": "error",
+                "message": "Request body must contain JSON."
             }), 400
-
 
         if "t1" not in data:
             return jsonify({
-                "error":
-                    "Missing T1 input."
+                "status": "error",
+                "message": "Missing T1 input."
             }), 400
-
 
         if "t2" not in data:
             return jsonify({
-                "error":
-                    "Missing T2 input."
+                "status": "error",
+                "message": "Missing T2 input."
             }), 400
-
 
         t1 = np.asarray(
             data["t1"],
@@ -579,134 +459,77 @@ def predict():
             dtype=np.float32
         )
 
-
-        # ----------------------------------------------------
-        # ACCEPT SINGLE IMAGE OR BATCH
-        # ----------------------------------------------------
-
         if t1.ndim == 3:
-            t1 = np.expand_dims(
-                t1,
-                axis=0
-            )
+            t1 = np.expand_dims(t1, axis=0)
 
         if t2.ndim == 3:
-            t2 = np.expand_dims(
-                t2,
-                axis=0
-            )
+            t2 = np.expand_dims(t2, axis=0)
 
-
-        # ----------------------------------------------------
-        # VERIFY INPUT
-        # ----------------------------------------------------
-
-        expected = (
-            256,
-            256,
-            13
-        )
+        expected = (256, 256, 13)
 
         if tuple(t1.shape[1:]) != expected:
-
             return jsonify({
-                "error":
-                    "Invalid T1 shape.",
-                "received":
-                    list(t1.shape),
-                "expected":
-                    [1, 256, 256, 13]
+                "status": "error",
+                "message": "Invalid T1 shape.",
+                "received": list(t1.shape),
+                "expected": [1, 256, 256, 13]
             }), 400
-
 
         if tuple(t2.shape[1:]) != expected:
-
             return jsonify({
-                "error":
-                    "Invalid T2 shape.",
-                "received":
-                    list(t2.shape),
-                "expected":
-                    [1, 256, 256, 13]
+                "status": "error",
+                "message": "Invalid T2 shape.",
+                "received": list(t2.shape),
+                "expected": [1, 256, 256, 13]
             }), 400
-
 
         if t1.shape[0] != t2.shape[0]:
-
             return jsonify({
-                "error":
-                    "T1 and T2 batch sizes differ."
+                "status": "error",
+                "message": "T1 and T2 batch sizes differ."
             }), 400
-
-
-        # ----------------------------------------------------
-        # INFERENCE
-        # ----------------------------------------------------
 
         probability = model.predict(
             [t1, t2],
             verbose=0
         )
 
-
         prediction = (
             probability >= THRESHOLD
-        ).astype(
-            np.uint8
-        )
-
-
-        # ----------------------------------------------------
-        # RESPONSE
-        # ----------------------------------------------------
+        ).astype(np.uint8)
 
         return jsonify({
 
             "status": "success",
 
-            "threshold":
-                THRESHOLD,
+            "threshold": THRESHOLD,
 
-            "probability_min":
-                float(
-                    probability.min()
-                ),
+            "probability_min": float(
+                probability.min()
+            ),
 
-            "probability_max":
-                float(
-                    probability.max()
-                ),
+            "probability_max": float(
+                probability.max()
+            ),
 
-            "change_pixels":
-                int(
-                    prediction.sum()
-                ),
+            "change_pixels": int(
+                prediction.sum()
+            ),
 
-            "total_pixels":
-                int(
-                    prediction.size
-                ),
+            "total_pixels": int(
+                prediction.size
+            ),
 
-            "change_percentage":
-                float(
-                    prediction.mean() * 100
-                ),
+            "change_percentage": float(
+                prediction.mean() * 100
+            ),
 
             "probability_map":
-                probability[
-                    0,
-                    ...,
-                    0
-                ].tolist(),
+                probability[0, ..., 0].tolist(),
 
             "change_map":
-                prediction[
-                    0,
-                    ...,
-                    0
-                ].tolist()
+                prediction[0, ..., 0].tolist()
         })
-
 
     except Exception as e:
 
@@ -716,15 +539,11 @@ def predict():
         }), 500
 
 
-
 # ============================================================
-# NUMPY FILE PREDICTION ENDPOINT
+# NUMPY FILE PREDICTION
 # ============================================================
 
-@app.route(
-    "/predict-npy",
-    methods=["POST"]
-)
+@app.route("/predict-npy", methods=["POST"])
 def predict_npy():
 
     try:
@@ -741,44 +560,23 @@ def predict_npy():
                 "message": "Missing T2 .npy file."
             }), 400
 
-        t1_file = request.files["t1"]
-        t2_file = request.files["t2"]
-
-        # ----------------------------------------------------
-        # LOAD NUMPY FILES
-        # ----------------------------------------------------
-
         t1 = np.load(
-            t1_file,
+            request.files["t1"],
             allow_pickle=False
         ).astype(np.float32)
 
         t2 = np.load(
-            t2_file,
+            request.files["t2"],
             allow_pickle=False
         ).astype(np.float32)
 
-        # ----------------------------------------------------
-        # ACCEPT SINGLE SCENE OR BATCH
-        # ----------------------------------------------------
-
         if t1.ndim == 3:
-            t1 = np.expand_dims(
-                t1,
-                axis=0
-            )
+            t1 = np.expand_dims(t1, axis=0)
 
         if t2.ndim == 3:
-            t2 = np.expand_dims(
-                t2,
-                axis=0
-            )
+            t2 = np.expand_dims(t2, axis=0)
 
-        expected = (
-            256,
-            256,
-            13
-        )
+        expected = (256, 256, 13)
 
         if tuple(t1.shape[1:]) != expected:
             return jsonify({
@@ -802,20 +600,12 @@ def predict_npy():
                 "message": "T1 and T2 scene counts differ."
             }), 400
 
-        # ----------------------------------------------------
-        # LIMIT DEPLOYMENT REQUEST
-        # ----------------------------------------------------
-
         if t1.shape[0] != 1:
             return jsonify({
                 "status": "error",
                 "message":
                     "Upload one T1 scene and one T2 scene."
             }), 400
-
-        # ----------------------------------------------------
-        # MODEL INFERENCE
-        # ----------------------------------------------------
 
         probability = model.predict(
             [t1, t2],
@@ -826,21 +616,8 @@ def predict_npy():
             probability >= THRESHOLD
         ).astype(np.uint8)
 
-        probability_map = (
-            probability[0, ..., 0]
-        )
-
-        change_map = (
-            prediction[0, ..., 0]
-        )
-
-        change_percentage = float(
-            change_map.mean() * 100
-        )
-
-        # ----------------------------------------------------
-        # RESPONSE
-        # ----------------------------------------------------
+        probability_map = probability[0, ..., 0]
+        change_map = prediction[0, ..., 0]
 
         return jsonify({
 
@@ -848,10 +625,7 @@ def predict_npy():
 
             "threshold": THRESHOLD,
 
-            "shape": [
-                256,
-                256
-            ],
+            "shape": [256, 256],
 
             "probability_min": float(
                 probability_map.min()
@@ -869,8 +643,9 @@ def predict_npy():
                 change_map.size
             ),
 
-            "change_percentage":
-                change_percentage,
+            "change_percentage": float(
+                change_map.mean() * 100
+            ),
 
             "probability_map":
                 probability_map.tolist(),
@@ -888,28 +663,30 @@ def predict_npy():
 
 
 # ============================================================
-# FRONTEND HEALTH
+# API STATUS
 # ============================================================
 
-@app.route(
-    "/api/status",
-    methods=["GET"]
-)
+@app.route("/api/status", methods=["GET"])
 def api_status():
 
     return jsonify({
+
         "service": "GeoSentinel AI",
+
         "status": "online",
+
         "model_loaded": True,
+
         "parameters": int(
             model.count_params()
         ),
+
         "threshold": THRESHOLD
     })
 
 
 # ============================================================
-# RENDER ENTRY POINT
+# LOCAL DEVELOPMENT ONLY
 # ============================================================
 
 if __name__ == "__main__":
@@ -921,7 +698,12 @@ if __name__ == "__main__":
         )
     )
 
+    print(
+        f"Starting Flask server on port {port}"
+    )
+
     app.run(
         host="0.0.0.0",
-        port=port
+        port=port,
+        debug=False
     )
