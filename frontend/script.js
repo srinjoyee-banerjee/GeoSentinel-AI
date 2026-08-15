@@ -1,553 +1,1377 @@
-// ============================================================
-// GEOSENTINEL AI
-// 3-PAGE DEMO FRONTEND
-// ============================================================
+```javascript
+/* ============================================================
+   GEOSENTINEL AI
+   FRONTEND SCRIPT
+   ============================================================ */
 
-const API_BASE = "";
+document.addEventListener("DOMContentLoaded", () => {
 
-const scenes = {
-    urban_1: {
-        name: "Urban Expansion 01",
-        t1: "urban_1_T1.png",
-        t2: "urban_1_T2.png",
-        n1: "urban_1_T1.npy",
-        n2: "urban_1_T2.npy"
-    },
+    /* ========================================================
+       CONFIGURATION
+       ======================================================== */
 
-    urban_2: {
-        name: "Urban Expansion 02",
-        t1: "urban_2_T1.png",
-        t2: "urban_2_T2.png",
-        n1: "urban_2_T1.npy",
-        n2: "urban_2_T2.npy"
-    },
+    const API_BASE =
+        window.location.hostname === "localhost" ||
+        window.location.hostname === "127.0.0.1"
+            ? "http://127.0.0.1:5000"
+            : "";
 
-    urban_3: {
-        name: "Urban Expansion 03",
-        t1: "urban_3_T1.png",
-        t2: "urban_3_T2.png",
-        n1: "urban_3_T1.npy",
-        n2: "urban_3_T2.npy"
+    const API_URL = `${API_BASE}/predict`;
+
+    const DEMO_T1 = "assets/T1_demo.png";
+    const DEMO_T2 = "assets/T2_demo.png";
+
+    /* ========================================================
+       DOM HELPERS
+       ======================================================== */
+
+    const $ = (id) => document.getElementById(id);
+
+    const query = (selector) =>
+        document.querySelector(selector);
+
+    const queryAll = (selector) =>
+        document.querySelectorAll(selector);
+
+
+    /* ========================================================
+       COMMON ELEMENTS
+       ======================================================== */
+
+    const t1Input =
+        $("t1Input") ||
+        $("t1File") ||
+        query("#t1 input[type='file']") ||
+        query("input[name='t1']");
+
+    const t2Input =
+        $("t2Input") ||
+        $("t2File") ||
+        query("#t2 input[type='file']") ||
+        query("input[name='t2']");
+
+    const t1Preview =
+        $("t1Preview") ||
+        $("previewT1") ||
+        $("resultT1");
+
+    const t2Preview =
+        $("t2Preview") ||
+        $("previewT2") ||
+        $("resultT2");
+
+    const analyzeButton =
+        $("analyzeBtn") ||
+        $("analyzeButton") ||
+        $("runAnalysis") ||
+        query("[data-action='analyze']");
+
+    const resetButton =
+        $("resetBtn") ||
+        $("resetButton") ||
+        query("[data-action='reset']");
+
+    const loading =
+        $("loading") ||
+        $("loadingOverlay") ||
+        $("analysisLoading");
+
+    const resultSection =
+        $("results") ||
+        $("resultSection") ||
+        $("analysisResults");
+
+    const errorBox =
+        $("errorMessage") ||
+        $("error") ||
+        $("statusMessage");
+
+    /* ========================================================
+       RESULT ELEMENTS
+       ======================================================== */
+
+    const changePercentage =
+        $("changePercentage") ||
+        $("changePercent") ||
+        $("changeValue");
+
+    const changePixels =
+        $("changePixels");
+
+    const totalPixels =
+        $("totalPixels");
+
+    const thresholdValue =
+        $("thresholdValue") ||
+        $("threshold");
+
+    const probabilityMin =
+        $("probabilityMin");
+
+    const probabilityMax =
+        $("probabilityMax");
+
+    const changeMapCanvas =
+        $("changeMapCanvas") ||
+        $("changeMap");
+
+    const probabilityCanvas =
+        $("probabilityCanvas") ||
+        $("probabilityMap");
+
+    /* ========================================================
+       STATE
+       ======================================================== */
+
+    let selectedT1 = null;
+    let selectedT2 = null;
+
+    let currentResult = null;
+
+    /* ========================================================
+       INITIAL STATE
+       ======================================================== */
+
+    hideLoading();
+    hideError();
+
+    if (resultSection) {
+        resultSection.style.display = "none";
     }
-};
 
+    /* ========================================================
+       FILE PREVIEW
+       ======================================================== */
 
-let selectedScene = "urban_1";
-let lastResult = null;
+    function previewFile(input, preview) {
 
+        if (!input || !preview) {
+            return;
+        }
 
-// ============================================================
-// ELEMENTS
-// ============================================================
+        input.addEventListener("change", () => {
 
-const page1 = document.getElementById("page1");
-const page2 = document.getElementById("page2");
-const page3 = document.getElementById("page3");
+            const file = input.files && input.files[0];
 
-const t1Select = document.getElementById("t1Select");
-const t2Select = document.getElementById("t2Select");
+            if (!file) {
+                return;
+            }
 
-const t1Preview = document.getElementById("t1Preview");
-const t2Preview = document.getElementById("t2Preview");
+            if (!file.type.startsWith("image/")) {
+                showError(
+                    "Please select a valid satellite image."
+                );
+                return;
+            }
 
-const analysisT1 = document.getElementById("analysisT1");
-const analysisT2 = document.getElementById("analysisT2");
+            const reader = new FileReader();
 
-const resultT1 = document.getElementById("resultT1");
-const resultT2 = document.getElementById("resultT2");
+            reader.onload = (event) => {
 
-const continueBtn = document.getElementById("continueBtn");
-const backBtn = document.getElementById("backBtn");
-const analyzeBtn = document.getElementById("analyzeBtn");
-const newAnalysisBtn = document.getElementById("newAnalysisBtn");
+                preview.src = event.target.result;
 
-const analysisStatus =
-    document.getElementById("analysisStatus");
+                preview.style.display = "block";
 
+                preview.dataset.loaded = "true";
+            };
 
-// ============================================================
-// PAGE NAVIGATION
-// ============================================================
-
-function showPage(number) {
-
-    page1.classList.remove("active-page");
-    page2.classList.remove("active-page");
-    page3.classList.remove("active-page");
-
-    if (number === 1) {
-        page1.classList.add("active-page");
+            reader.readAsDataURL(file);
+        });
     }
 
-    if (number === 2) {
-        page2.classList.add("active-page");
+    previewFile(t1Input, t1Preview);
+    previewFile(t2Input, t2Preview);
+
+    /* ========================================================
+       DEMO IMAGES
+       ======================================================== */
+
+    function loadDemoImages() {
+
+        if (t1Preview) {
+            t1Preview.src = DEMO_T1;
+            t1Preview.style.display = "block";
+        }
+
+        if (t2Preview) {
+            t2Preview.src = DEMO_T2;
+            t2Preview.style.display = "block";
+        }
     }
 
-    if (number === 3) {
-        page3.classList.add("active-page");
+
+    /* ========================================================
+       IMAGE → ARRAY
+       
+       IMPORTANT:
+       The deployed backend expects:
+       [1, 256, 256, 13]
+
+       Browser images are RGB, therefore the frontend
+       creates a 13-channel representation by repeating
+       the RGB-derived channels.
+
+       This is intended for DEMO / frontend operation.
+       ======================================================== */
+
+    async function imageToTensor(file) {
+
+        return new Promise((resolve, reject) => {
+
+            const image = new Image();
+
+            image.onload = () => {
+
+                try {
+
+                    const canvas =
+                        document.createElement("canvas");
+
+                    canvas.width = 256;
+                    canvas.height = 256;
+
+                    const ctx =
+                        canvas.getContext("2d", {
+                            willReadFrequently: true
+                        });
+
+                    ctx.drawImage(
+                        image,
+                        0,
+                        0,
+                        256,
+                        256
+                    );
+
+                    const imageData =
+                        ctx.getImageData(
+                            0,
+                            0,
+                            256,
+                            256
+                        );
+
+                    const pixels =
+                        imageData.data;
+
+                    const tensor =
+                        new Array(256);
+
+                    for (let y = 0; y < 256; y++) {
+
+                        tensor[y] =
+                            new Array(256);
+
+                        for (let x = 0; x < 256; x++) {
+
+                            const pixelIndex =
+                                (y * 256 + x) * 4;
+
+                            const r =
+                                pixels[pixelIndex] / 255;
+
+                            const g =
+                                pixels[pixelIndex + 1] / 255;
+
+                            const b =
+                                pixels[pixelIndex + 2] / 255;
+
+                            /*
+                             * 13-channel approximation
+                             *
+                             * The real model expects 13
+                             * channels. For browser demo
+                             * images we construct a stable
+                             * 13-channel tensor from RGB.
+                             */
+
+                            tensor[y][x] = [
+
+                                r,
+                                g,
+                                b,
+
+                                (r + g) / 2,
+                                (g + b) / 2,
+                                (r + b) / 2,
+
+                                Math.abs(r - g),
+                                Math.abs(g - b),
+                                Math.abs(r - b),
+
+                                (r + g + b) / 3,
+
+                                r * r,
+                                g * g,
+                                b * b
+                            ];
+                        }
+                    }
+
+                    resolve([tensor]);
+
+                } catch (error) {
+
+                    reject(error);
+                }
+            };
+
+            image.onerror = () => {
+
+                reject(
+                    new Error(
+                        "Unable to read the selected image."
+                    )
+                );
+            };
+
+            image.src =
+                URL.createObjectURL(file);
+        });
     }
 
-    document.querySelectorAll(".step").forEach(step => {
 
-        const stepNumber =
-            Number(step.dataset.step);
+    /* ========================================================
+       GET IMAGE FILE
+       ======================================================== */
 
-        step.classList.toggle(
-            "active",
-            stepNumber === number
+    function getFile(input) {
+
+        if (!input || !input.files) {
+            return null;
+        }
+
+        return input.files[0] || null;
+    }
+
+
+    /* ========================================================
+       DEMO FILE LOADER
+       ======================================================== */
+
+    async function urlToFile(
+        url,
+        filename
+    ) {
+
+        const response =
+            await fetch(url);
+
+        if (!response.ok) {
+            throw new Error(
+                `Unable to load ${filename}.`
+            );
+        }
+
+        const blob =
+            await response.blob();
+
+        return new File(
+            [blob],
+            filename,
+            {
+                type:
+                    blob.type ||
+                    "image/png"
+            }
         );
-
-    });
-
-    window.scrollTo({
-        top: 0,
-        behavior: "smooth"
-    });
-}
-
-
-// ============================================================
-// UPDATE SCENE PREVIEWS
-// ============================================================
-
-function updateScene() {
-
-    const t1 = scenes[t1Select.value];
-    const t2 = scenes[t2Select.value];
-
-    t1Preview.src =
-        `assets/${t1.t1}`;
-
-    t2Preview.src =
-        `assets/${t2.t2}`;
-
-    selectedScene = t1Select.value;
-}
-
-
-// ============================================================
-// T1 SELECTION
-// ============================================================
-
-t1Select.addEventListener(
-    "change",
-    updateScene
-);
-
-
-// ============================================================
-// T2 SELECTION
-// ============================================================
-
-t2Select.addEventListener(
-    "change",
-    updateScene
-);
-
-
-// ============================================================
-// PAGE 1 → PAGE 2
-// ============================================================
-
-continueBtn.addEventListener(
-    "click",
-    () => {
-
-        const t1 = scenes[t1Select.value];
-        const t2 = scenes[t2Select.value];
-
-        selectedScene = t1Select.value;
-
-        analysisT1.src =
-            `assets/${t1.t1}`;
-
-        analysisT2.src =
-            `assets/${t2.t2}`;
-
-        analysisStatus.innerHTML = `
-            <div class="status-dot"></div>
-            <span>
-                READY · ${t1.name.toUpperCase()}
-            </span>
-        `;
-
-        showPage(2);
-    }
-);
-
-
-// ============================================================
-// PAGE 2 → PAGE 1
-// ============================================================
-
-backBtn.addEventListener(
-    "click",
-    () => showPage(1)
-);
-
-
-// ============================================================
-// FETCH DEMO NUMPY FILE
-// ============================================================
-
-async function fetchDemoFile(filename) {
-
-    const response = await fetch(
-        `demo/${filename}`
-    );
-
-    if (!response.ok) {
-
-        throw new Error(
-            `Unable to load ${filename}`
-        );
     }
 
-    return await response.blob();
-}
 
+    /* ========================================================
+       RUN ANALYSIS
+       ======================================================== */
 
-// ============================================================
-// ANALYZE
-// ============================================================
+    async function runAnalysis() {
 
-analyzeBtn.addEventListener(
-    "click",
-    async () => {
+        hideError();
+
+        let t1File =
+            getFile(t1Input);
+
+        let t2File =
+            getFile(t2Input);
+
+        /*
+         * If no files are selected, automatically use
+         * the included demo scenes.
+         */
+
+        if (!t1File) {
+
+            try {
+
+                t1File =
+                    await urlToFile(
+                        DEMO_T1,
+                        "T1_demo.png"
+                    );
+
+            } catch (error) {
+
+                showError(
+                    "T1 image is missing. Please upload a T1 image."
+                );
+
+                return;
+            }
+        }
+
+        if (!t2File) {
+
+            try {
+
+                t2File =
+                    await urlToFile(
+                        DEMO_T2,
+                        "T2_demo.png"
+                    );
+
+            } catch (error) {
+
+                showError(
+                    "T2 image is missing. Please upload a T2 image."
+                );
+
+                return;
+            }
+        }
+
+        selectedT1 = t1File;
+        selectedT2 = t2File;
 
         try {
 
-            analyzeBtn.disabled = true;
+            showLoading();
 
-            analyzeBtn.innerHTML =
-                "RUNNING AI ANALYSIS · · ·";
+            setAnalysisButtonState(true);
 
+            /*
+             * Convert both images.
+             */
 
-            analysisStatus.innerHTML = `
-                <div class="status-dot"></div>
-                <span>
-                    GEO SENTINEL MODEL IS PROCESSING THE SCENE...
-                </span>
-            `;
+            const t1Tensor =
+                await imageToTensor(
+                    t1File
+                );
 
+            const t2Tensor =
+                await imageToTensor(
+                    t2File
+                );
 
-            const t1Key =
-                t1Select.value;
-
-            const t2Key =
-                t2Select.value;
-
-            const t1 =
-                scenes[t1Key];
-
-            const t2 =
-                scenes[t2Key];
-
-
-            // ------------------------------------------------
-            // LOAD DEMO ARRAYS
-            // ------------------------------------------------
-
-            const t1Blob =
-                await fetchDemoFile(t1.n1);
-
-            const t2Blob =
-                await fetchDemoFile(t2.n2);
-
-
-            // ------------------------------------------------
-            // BUILD MULTIPART REQUEST
-            // ------------------------------------------------
-
-            const formData =
-                new FormData();
-
-            formData.append(
-                "t1",
-                t1Blob,
-                t1.n1
-            );
-
-            formData.append(
-                "t2",
-                t2Blob,
-                t2.n2
-            );
-
-
-            // ------------------------------------------------
-            // SEND TO FLASK
-            // ------------------------------------------------
+            /*
+             * Backend expects JSON:
+             *
+             * {
+             *   t1: [...],
+             *   t2: [...]
+             * }
+             */
 
             const response =
                 await fetch(
-                    `${API_BASE}/predict-npy`,
+                    API_URL,
                     {
                         method: "POST",
-                        body: formData
+
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+
+                        body: JSON.stringify({
+                            t1: t1Tensor[0],
+                            t2: t2Tensor[0]
+                        })
                     }
                 );
 
-
-            const result =
+            const data =
                 await response.json();
 
-
-            if (!response.ok ||
-                result.status !== "success") {
+            if (!response.ok) {
 
                 throw new Error(
-                    result.message ||
-                    "AI analysis failed."
+                    data.message ||
+                    data.error ||
+                    "GeoSentinel analysis failed."
                 );
             }
 
+            if (
+                data.status &&
+                data.status !== "success"
+            ) {
 
-            lastResult = result;
+                throw new Error(
+                    data.message ||
+                    "Model returned an error."
+                );
+            }
 
+            currentResult = data;
 
-            // ------------------------------------------------
-            // SHOW RESULTS
-            // ------------------------------------------------
-
-            displayResults(
-                t1Key,
-                t2Key,
-                result
-            );
-
-            showPage(3);
-
+            displayResults(data);
 
         } catch (error) {
 
-            console.error(error);
+            console.error(
+                "GeoSentinel error:",
+                error
+            );
 
-            analysisStatus.innerHTML = `
-                <div
-                    class="status-dot"
-                    style="background:#ff7b72"
-                ></div>
-
-                <span style="color:#ff7b72">
-                    ANALYSIS ERROR · ${error.message}
-                </span>
-            `;
+            showError(
+                error.message ||
+                "Unable to connect to GeoSentinel AI."
+            );
 
         } finally {
 
-            analyzeBtn.disabled = false;
+            hideLoading();
 
-            analyzeBtn.innerHTML =
-                `ANALYZE CHANGE <span>✦</span>`;
+            setAnalysisButtonState(false);
+        }
+    }
+
+
+    /* ========================================================
+       DISPLAY RESULTS
+       ======================================================== */
+
+    function displayResults(data) {
+
+        if (resultSection) {
+            resultSection.style.display = "";
         }
 
+        /*
+         * Change percentage
+         */
+
+        if (changePercentage) {
+
+            const percentage =
+                Number(
+                    data.change_percentage || 0
+                );
+
+            changePercentage.textContent =
+                `${percentage.toFixed(2)}%`;
+        }
+
+        /*
+         * Change pixels
+         */
+
+        if (changePixels) {
+
+            changePixels.textContent =
+                formatNumber(
+                    data.change_pixels || 0
+                );
+        }
+
+        /*
+         * Total pixels
+         */
+
+        if (totalPixels) {
+
+            totalPixels.textContent =
+                formatNumber(
+                    data.total_pixels || 0
+                );
+        }
+
+        /*
+         * Threshold
+         */
+
+        if (thresholdValue) {
+
+            const threshold =
+                Number(
+                    data.threshold ?? 0.60
+                );
+
+            thresholdValue.textContent =
+                threshold.toFixed(2);
+        }
+
+        /*
+         * Probability range
+         */
+
+        if (probabilityMin) {
+
+            probabilityMin.textContent =
+                Number(
+                    data.probability_min || 0
+                ).toFixed(4);
+        }
+
+        if (probabilityMax) {
+
+            probabilityMax.textContent =
+                Number(
+                    data.probability_max || 0
+                ).toFixed(4);
+        }
+
+        /*
+         * Render change map.
+         */
+
+        if (data.change_map) {
+
+            renderChangeMap(
+                data.change_map,
+                changeMapCanvas
+            );
+        }
+
+        /*
+         * Render probability map.
+         */
+
+        if (data.probability_map) {
+
+            renderProbabilityMap(
+                data.probability_map,
+                probabilityCanvas
+            );
+        }
+
+        /*
+         * Scroll to results.
+         */
+
+        if (resultSection) {
+
+            setTimeout(() => {
+
+                resultSection.scrollIntoView({
+                    behavior: "smooth",
+                    block: "start"
+                });
+
+            }, 150);
+        }
     }
-);
 
 
-// ============================================================
-// DISPLAY RESULTS
-// ============================================================
+    /* ========================================================
+       CHANGE MAP
+       ======================================================== */
 
-function displayResults(
-    t1Key,
-    t2Key,
-    result
-) {
-
-    const t1 =
-        scenes[t1Key];
-
-    const t2 =
-        scenes[t2Key];
-
-
-    resultT1.src =
-        `assets/${t1.t1}`;
-
-    resultT2.src =
-        `assets/${t2.t2`;
-
-
-    document.getElementById(
-        "changePercentage"
-    ).textContent =
-        `${result.change_percentage.toFixed(2)}%`;
-
-
-    document.getElementById(
-        "changePixels"
-    ).textContent =
-        Number(
-            result.change_pixels
-        ).toLocaleString();
-
-
-    document.getElementById(
-        "totalPixels"
-    ).textContent =
-        Number(
-            result.total_pixels
-        ).toLocaleString();
-
-
-    document.getElementById(
-        "threshold"
-    ).textContent =
-        Number(
-            result.threshold
-        ).toFixed(2);
-
-
-    document.getElementById(
-        "resultSummary"
-    ).textContent =
-        `${t1.name} — temporal comparison completed by the GeoSentinel AI change detection model.`;
-
-
-    createChangeMap(
-        result.change_map
-    );
-
-
-    const percentage =
-        result.change_percentage;
-
-
-    let interpretation;
-
-
-    if (percentage < 1) {
-
-        interpretation =
-            "Minimal spatial change detected. " +
-            "The selected area remains largely stable " +
-            "between the two observations.";
-
-    } else if (percentage < 10) {
-
-        interpretation =
-            "Localized change detected. " +
-            "The model identifies spatial changes that " +
-            "may indicate early-stage urban development " +
-            "or land-cover transformation.";
-
-    } else {
-
-        interpretation =
-            "Significant spatial change detected. " +
-            "The detected pattern is consistent with " +
-            "substantial land-cover transformation and " +
-            "possible urban expansion between T1 and T2.";
-    }
-
-
-    document.getElementById(
-        "interpretationText"
-    ).textContent =
-        interpretation;
-}
-
-
-// ============================================================
-// CHANGE MAP
-// ============================================================
-
-function createChangeMap(changeMap) {
-
-    const canvas =
-        document.getElementById(
-            "changeCanvas"
-        );
-
-    const ctx =
-        canvas.getContext("2d");
-
-
-    const width =
-        changeMap[0].length;
-
-    const height =
-        changeMap.length;
-
-
-    canvas.width = width;
-    canvas.height = height;
-
-
-    const image =
-        ctx.createImageData(
-            width,
-            height
-        );
-
-
-    for (
-        let y = 0;
-        y < height;
-        y++
+    function renderChangeMap(
+        map,
+        canvas
     ) {
 
-        for (
-            let x = 0;
-            x < width;
-            x++
-        ) {
+        if (!canvas || !map) {
+            return;
+        }
 
-            const index =
-                (y * width + x) * 4;
+        const height =
+            map.length;
 
+        const width =
+            map[0]?.length || 0;
 
-            if (
-                changeMap[y][x] >= 1
-            ) {
+        if (!width || !height) {
+            return;
+        }
 
-                // Change pixels
-                image.data[index] = 255;
-                image.data[index + 1] = 90;
-                image.data[index + 2] = 70;
-                image.data[index + 3] = 255;
+        canvas.width = width;
+        canvas.height = height;
 
-            } else {
+        const ctx =
+            canvas.getContext("2d");
 
-                // Stable pixels
-                image.data[index] = 10;
-                image.data[index + 1] = 30;
-                image.data[index + 2] = 25;
-                image.data[index + 3] = 255;
+        const imageData =
+            ctx.createImageData(
+                width,
+                height
+            );
+
+        for (let y = 0; y < height; y++) {
+
+            for (let x = 0; x < width; x++) {
+
+                const value =
+                    Number(
+                        map[y][x]
+                    ) >= 0.5
+                        ? 1
+                        : 0;
+
+                const index =
+                    (y * width + x) * 4;
+
+                if (value === 1) {
+
+                    /*
+                     * Change region
+                     */
+
+                    imageData.data[index] =
+                        255;
+
+                    imageData.data[index + 1] =
+                        72;
+
+                    imageData.data[index + 2] =
+                        72;
+
+                    imageData.data[index + 3] =
+                        255;
+
+                } else {
+
+                    /*
+                     * No change
+                     */
+
+                    imageData.data[index] =
+                        20;
+
+                    imageData.data[index + 1] =
+                        28;
+
+                    imageData.data[index + 2] =
+                        38;
+
+                    imageData.data[index + 3] =
+                        255;
+                }
             }
+        }
+
+        ctx.putImageData(
+            imageData,
+            0,
+            0
+        );
+
+        canvas.style.display = "block";
+    }
+
+
+    /* ========================================================
+       PROBABILITY MAP
+       ======================================================== */
+
+    function renderProbabilityMap(
+        map,
+        canvas
+    ) {
+
+        if (!canvas || !map) {
+            return;
+        }
+
+        const height =
+            map.length;
+
+        const width =
+            map[0]?.length || 0;
+
+        if (!width || !height) {
+            return;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx =
+            canvas.getContext("2d");
+
+        const imageData =
+            ctx.createImageData(
+                width,
+                height
+            );
+
+        for (let y = 0; y < height; y++) {
+
+            for (let x = 0; x < width; x++) {
+
+                const value =
+                    Math.max(
+                        0,
+                        Math.min(
+                            1,
+                            Number(
+                                map[y][x]
+                            )
+                        )
+                    );
+
+                /*
+                 * Dark → cyan → yellow → white
+                 * probability visualization.
+                 */
+
+                const r =
+                    Math.round(
+                        255 * value
+                    );
+
+                const g =
+                    Math.round(
+                        120 * value
+                    );
+
+                const b =
+                    Math.round(
+                        255 * (1 - value)
+                    );
+
+                const index =
+                    (y * width + x) * 4;
+
+                imageData.data[index] =
+                    r;
+
+                imageData.data[index + 1] =
+                    g;
+
+                imageData.data[index + 2] =
+                    b;
+
+                imageData.data[index + 3] =
+                    255;
+            }
+        }
+
+        ctx.putImageData(
+            imageData,
+            0,
+            0
+        );
+
+        canvas.style.display = "block";
+    }
+
+
+    /* ========================================================
+       NUMBER FORMAT
+       ======================================================== */
+
+    function formatNumber(value) {
+
+        return Number(value)
+            .toLocaleString(
+                "en-IN"
+            );
+    }
+
+
+    /* ========================================================
+       LOADING
+       ======================================================== */
+
+    function showLoading() {
+
+        if (loading) {
+
+            loading.style.display =
+                "flex";
+        }
+
+        document.body.classList.add(
+            "analysis-running"
+        );
+    }
+
+    function hideLoading() {
+
+        if (loading) {
+
+            loading.style.display =
+                "none";
+        }
+
+        document.body.classList.remove(
+            "analysis-running"
+        );
+    }
+
+
+    /* ========================================================
+       ERROR HANDLING
+       ======================================================== */
+
+    function showError(message) {
+
+        console.error(
+            message
+        );
+
+        if (!errorBox) {
+            return;
+        }
+
+        errorBox.textContent =
+            message;
+
+        errorBox.style.display =
+            "block";
+    }
+
+    function hideError() {
+
+        if (!errorBox) {
+            return;
+        }
+
+        errorBox.textContent = "";
+
+        errorBox.style.display =
+            "none";
+    }
+
+
+    /* ========================================================
+       BUTTON STATE
+       ======================================================== */
+
+    function setAnalysisButtonState(
+        running
+    ) {
+
+        if (!analyzeButton) {
+            return;
+        }
+
+        analyzeButton.disabled =
+            running;
+
+        if (running) {
+
+            analyzeButton.dataset.originalText =
+                analyzeButton.textContent;
+
+            analyzeButton.textContent =
+                "ANALYZING...";
+
+        } else {
+
+            analyzeButton.textContent =
+                analyzeButton.dataset.originalText ||
+                "ANALYZE CHANGE";
         }
     }
 
 
-    ctx.putImageData(
-        image,
-        0,
-        0
+    /* ========================================================
+       RESET
+       ======================================================== */
+
+    function resetAnalysis() {
+
+        selectedT1 = null;
+        selectedT2 = null;
+        currentResult = null;
+
+        hideError();
+
+        if (t1Input) {
+            t1Input.value = "";
+        }
+
+        if (t2Input) {
+            t2Input.value = "";
+        }
+
+        if (t1Preview) {
+
+            t1Preview.removeAttribute(
+                "src"
+            );
+
+            t1Preview.style.display =
+                "none";
+        }
+
+        if (t2Preview) {
+
+            t2Preview.removeAttribute(
+                "src"
+            );
+
+            t2Preview.style.display =
+                "none";
+        }
+
+        if (resultSection) {
+
+            resultSection.style.display =
+                "none";
+        }
+
+        clearCanvas(
+            changeMapCanvas
+        );
+
+        clearCanvas(
+            probabilityCanvas
+        );
+
+        window.scrollTo({
+            top: 0,
+            behavior: "smooth"
+        });
+    }
+
+
+    function clearCanvas(canvas) {
+
+        if (!canvas) {
+            return;
+        }
+
+        const ctx =
+            canvas.getContext("2d");
+
+        ctx.clearRect(
+            0,
+            0,
+            canvas.width,
+            canvas.height
+        );
+    }
+
+
+    /* ========================================================
+       EVENT LISTENERS
+       ======================================================== */
+
+    if (analyzeButton) {
+
+        analyzeButton.addEventListener(
+            "click",
+            (event) => {
+
+                event.preventDefault();
+
+                runAnalysis();
+            }
+        );
+    }
+
+    if (resetButton) {
+
+        resetButton.addEventListener(
+            "click",
+            (event) => {
+
+                event.preventDefault();
+
+                resetAnalysis();
+            }
+        );
+    }
+
+
+    /* ========================================================
+       DEMO BUTTONS
+       ======================================================== */
+
+    queryAll(
+        "[data-demo]"
+    ).forEach((button) => {
+
+        button.addEventListener(
+            "click",
+            () => {
+
+                loadDemoImages();
+
+                /*
+                 * Demo buttons should not automatically
+                 * run the model unless explicitly marked
+                 * with data-demo="analyze".
+                 */
+
+                if (
+                    button.dataset.demo ===
+                    "analyze"
+                ) {
+
+                    runAnalysis();
+                }
+            }
+        );
+    });
+
+
+    /* ========================================================
+       DRAG & DROP
+       ======================================================== */
+
+    function enableDropZone(
+        zone,
+        input
+    ) {
+
+        if (!zone || !input) {
+            return;
+        }
+
+        [
+            "dragenter",
+            "dragover"
+        ].forEach(
+            (eventName) => {
+
+                zone.addEventListener(
+                    eventName,
+                    (event) => {
+
+                        event.preventDefault();
+
+                        zone.classList.add(
+                            "drag-active"
+                        );
+                    }
+                );
+            }
+        );
+
+        [
+            "dragleave",
+            "drop"
+        ].forEach(
+            (eventName) => {
+
+                zone.addEventListener(
+                    eventName,
+                    (event) => {
+
+                        event.preventDefault();
+
+                        zone.classList.remove(
+                            "drag-active"
+                        );
+                    }
+                );
+            }
+        );
+
+        zone.addEventListener(
+            "drop",
+            (event) => {
+
+                const files =
+                    event.dataTransfer.files;
+
+                if (
+                    !files ||
+                    !files.length
+                ) {
+                    return;
+                }
+
+                const file =
+                    files[0];
+
+                if (
+                    !file.type.startsWith(
+                        "image/"
+                    )
+                ) {
+
+                    showError(
+                        "Please drop an image file."
+                    );
+
+                    return;
+                }
+
+                try {
+
+                    const dataTransfer =
+                        new DataTransfer();
+
+                    dataTransfer.items.add(
+                        file
+                    );
+
+                    input.files =
+                        dataTransfer.files;
+
+                    input.dispatchEvent(
+                        new Event(
+                            "change",
+                            {
+                                bubbles: true
+                            }
+                        )
+                    );
+
+                } catch (error) {
+
+                    console.error(
+                        error
+                    );
+                }
+            }
+        );
+    }
+
+
+    enableDropZone(
+        $("t1DropZone") ||
+        query(".t1-drop-zone"),
+        t1Input
+    );
+
+    enableDropZone(
+        $("t2DropZone") ||
+        query(".t2-drop-zone"),
+        t2Input
     );
 
 
-    document.getElementById(
-        "mapLoading"
-    ).style.display =
-        "none";
-}
+    /* ========================================================
+       KEYBOARD ACCESS
+       ======================================================== */
+
+    document.addEventListener(
+        "keydown",
+        (event) => {
+
+            /*
+             * Ctrl/Cmd + Enter
+             * runs analysis.
+             */
+
+            if (
+                (event.ctrlKey ||
+                    event.metaKey) &&
+                event.key === "Enter"
+            ) {
+
+                event.preventDefault();
+
+                runAnalysis();
+            }
+
+            /*
+             * Escape
+             * closes loading/error state.
+             */
+
+            if (
+                event.key === "Escape"
+            ) {
+
+                hideLoading();
+            }
+        }
+    );
 
 
-// ============================================================
-// NEW ANALYSIS
-// ============================================================
+    /* ========================================================
+       API STATUS CHECK
+       ======================================================== */
 
-newAnalysisBtn.addEventListener(
-    "click",
-    () => {
+    async function checkAPIStatus() {
 
-        document.getElementById(
-            "mapLoading"
-        ).style.display =
-            "grid";
+        try {
 
-        showPage(1);
+            const response =
+                await fetch(
+                    `${API_BASE}/api/status`,
+                    {
+                        method: "GET"
+                    }
+                );
+
+            if (!response.ok) {
+                return false;
+            }
+
+            const data =
+                await response.json();
+
+            return (
+                data.status ===
+                "online"
+            );
+
+        } catch (error) {
+
+            console.warn(
+                "GeoSentinel API status unavailable."
+            );
+
+            return false;
+        }
     }
-);
+
+
+    /* ========================================================
+       INITIAL API CHECK
+       ======================================================== */
+
+    checkAPIStatus()
+        .then((online) => {
+
+            document.body.dataset.api =
+                online
+                    ? "online"
+                    : "offline";
+
+            console.log(
+                online
+                    ? "✓ GeoSentinel AI API online"
+                    : "⚠ GeoSentinel AI API unavailable"
+            );
+        });
+
+
+    /* ========================================================
+       GLOBAL ACCESS
+       ======================================================== */
+
+    window.GeoSentinel = {
+
+        runAnalysis,
+
+        resetAnalysis,
+
+        loadDemoImages,
+
+        checkAPIStatus,
+
+        getResult: () =>
+            currentResult
+    };
+
+
+    /* ========================================================
+       READY
+       ======================================================== */
+
+    console.log(
+        "=================================================="
+    );
+
+    console.log(
+        "GeoSentinel AI frontend initialized."
+    );
+
+    console.log(
+        "API:",
+        API_URL
+    );
+
+    console.log(
+        "=================================================="
+    );
+});
+```
