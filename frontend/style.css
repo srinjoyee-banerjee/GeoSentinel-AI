@@ -1,1453 +1,451 @@
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-}
-
-:root {
-    --bg: #05080d;
-    --panel: #0b1119;
-    --panel2: #0e1620;
-    --line: rgba(124, 196, 255, 0.14);
-    --text: #edf7ff;
-    --muted: #718496;
-    --cyan: #69dcff;
-    --blue: #4285ff;
-    --green: #65f0b2;
-    --danger: #ff6f91;
-}
-
-html {
-    scroll-behavior: smooth;
-}
-
-body {
-    background:
-        radial-gradient(
-            circle at 70% 10%,
-            rgba(39, 101, 157, 0.18),
-            transparent 28%
-        ),
-        radial-gradient(
-            circle at 20% 70%,
-            rgba(34, 70, 120, 0.12),
-            transparent 25%
-        ),
-        var(--bg);
-
-    color: var(--text);
-
-    font-family:
-        "Manrope",
-        sans-serif;
-
-    min-height: 100vh;
-    overflow-x: hidden;
-}
-
-body::before {
-    content: "";
-
-    position: fixed;
-
-    inset: 0;
-
-    pointer-events: none;
-
-    background-image:
-        linear-gradient(
-            rgba(255,255,255,0.015) 1px,
-            transparent 1px
-        ),
-        linear-gradient(
-            90deg,
-            rgba(255,255,255,0.015) 1px,
-            transparent 1px
-        );
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    background-size: 60px 60px;
+    <title>GeoSentinel AI</title>
 
-    mask-image:
-        linear-gradient(
-            to bottom,
-            black,
-            transparent 80%
-        );
+    <link rel="stylesheet" href="style.css">
+</head>
 
-    z-index: -2;
-}
+<body>
 
-.stars {
-    position: fixed;
-    inset: 0;
+<div class="app-shell">
 
-    background-image:
-        radial-gradient(
-            circle,
-            rgba(255,255,255,.7) 1px,
-            transparent 1px
-        );
+    <!-- =====================================================
+         NAVIGATION
+    ====================================================== -->
 
-    background-size: 130px 130px;
+    <header class="topbar">
 
-    opacity: .15;
+        <div class="brand">
+            <div class="brand-mark">G</div>
 
-    animation: drift 25s linear infinite;
+            <div>
+                <div class="brand-name">GEOSENTINEL</div>
+                <div class="brand-sub">AI CHANGE INTELLIGENCE</div>
+            </div>
+        </div>
 
-    pointer-events: none;
+        <div class="step-indicator">
+            <span class="step active" data-step="1">01</span>
+            <span class="line"></span>
+            <span class="step" data-step="2">02</span>
+            <span class="line"></span>
+            <span class="step" data-step="3">03</span>
+        </div>
 
-    z-index: -1;
-}
+    </header>
 
-@keyframes drift {
-    from {
-        transform: translateY(0);
-    }
 
-    to {
-        transform: translateY(-130px);
-    }
-}
+    <!-- =====================================================
+         PAGE 1 — SCENE SELECTION
+    ====================================================== -->
 
-.scanline {
-    position: fixed;
+    <section id="page1" class="page active-page">
 
-    left: 0;
-    right: 0;
+        <div class="hero-copy">
 
-    height: 1px;
+            <div class="eyebrow">SATELLITE CHANGE DETECTION</div>
 
-    background:
-        linear-gradient(
-            90deg,
-            transparent,
-            rgba(105,220,255,.5),
-            transparent
-        );
+            <h1>
+                See how the
+                <span>Earth changes.</span>
+            </h1>
 
-    opacity: .15;
+            <p>
+                Select a predefined satellite scene and let
+                GeoSentinel AI compare two points in time.
+            </p>
 
-    animation: scan 8s linear infinite;
+        </div>
 
-    pointer-events: none;
 
-    z-index: 20;
-}
+        <div class="selection-grid">
 
-@keyframes scan {
-    from {
-        top: 0;
-    }
+            <!-- T1 -->
 
-    to {
-        top: 100%;
-    }
-}
+            <div class="scene-card">
 
-.nav {
-    height: 76px;
+                <div class="card-label">
+                    <span>T1</span>
+                    EARLIER OBSERVATION
+                </div>
 
-    display: flex;
+                <div class="preview-frame">
 
-    align-items: center;
+                    <img
+                        id="t1Preview"
+                        src="assets/urban_1_T1.png"
+                        alt="T1 satellite scene"
+                    >
 
-    justify-content: space-between;
+                    <div class="image-overlay">
+                        <span>BEFORE</span>
+                    </div>
 
-    padding: 0 6vw;
+                </div>
 
-    border-bottom:
-        1px solid var(--line);
+                <select id="t1Select">
 
-    background:
-        rgba(5,8,13,.7);
+                    <option value="urban_1">
+                        Urban Expansion 01
+                    </option>
 
-    backdrop-filter:
-        blur(18px);
+                    <option value="urban_2">
+                        Urban Expansion 02
+                    </option>
 
-    position: sticky;
+                    <option value="urban_3">
+                        Urban Expansion 03
+                    </option>
 
-    top: 0;
+                </select>
 
-    z-index: 50;
-}
+            </div>
 
-.brand {
-    display: flex;
 
-    align-items: center;
+            <!-- T2 -->
 
-    gap: 12px;
-}
+            <div class="scene-card">
 
-.brand-mark {
-    width: 38px;
-    height: 38px;
+                <div class="card-label">
+                    <span>T2</span>
+                    LATER OBSERVATION
+                </div>
 
-    display: grid;
-    place-items: center;
+                <div class="preview-frame">
 
-    border:
-        1px solid rgba(105,220,255,.45);
+                    <img
+                        id="t2Preview"
+                        src="assets/urban_1_T2.png"
+                        alt="T2 satellite scene"
+                    >
 
-    color: var(--cyan);
+                    <div class="image-overlay after">
+                        <span>AFTER</span>
+                    </div>
 
-    font-family:
-        "DM Mono";
+                </div>
 
-    font-size: 12px;
+                <select id="t2Select">
 
-    box-shadow:
-        0 0 20px
-        rgba(105,220,255,.12);
-}
+                    <option value="urban_1">
+                        Urban Expansion 01
+                    </option>
 
-.brand-name {
-    font-size: 13px;
+                    <option value="urban_2">
+                        Urban Expansion 02
+                    </option>
 
-    font-weight: 800;
+                    <option value="urban_3">
+                        Urban Expansion 03
+                    </option>
 
-    letter-spacing: .2em;
-}
+                </select>
 
-.brand-sub {
-    font-family:
-        "DM Mono";
+            </div>
 
-    color: var(--muted);
+        </div>
 
-    font-size: 8px;
 
-    letter-spacing: .18em;
+        <div class="scene-info">
 
-    margin-top: 3px;
-}
+            <div>
+                <span class="info-title">ANALYSIS TYPE</span>
+                <strong>Urban Expansion</strong>
+            </div>
 
-.nav-status {
-    display: flex;
+            <div>
+                <span class="info-title">INPUT</span>
+                <strong>13-band satellite imagery</strong>
+            </div>
 
-    align-items: center;
+            <div>
+                <span class="info-title">AI MODEL</span>
+                <strong>Siamese U-Net</strong>
+            </div>
 
-    gap: 9px;
+        </div>
 
-    font-family:
-        "DM Mono";
 
-    font-size: 10px;
+        <button id="continueBtn" class="primary-btn">
+            CONTINUE TO ANALYSIS
+            <span>→</span>
+        </button>
 
-    letter-spacing: .1em;
+    </section>
 
-    color: var(--muted);
-}
 
-.status-dot {
-    width: 7px;
-    height: 7px;
 
-    border-radius: 50%;
+    <!-- =====================================================
+         PAGE 2 — ANALYSIS
+    ====================================================== -->
 
-    background: var(--muted);
+    <section id="page2" class="page">
 
-    box-shadow:
-        0 0 10px currentColor;
-}
+        <div class="analysis-header">
 
-.status-dot.online {
-    background: var(--green);
-    color: var(--green);
-}
+            <div>
+                <div class="eyebrow">STEP 02 / AI ANALYSIS</div>
 
-.status-dot.error {
-    background: var(--danger);
-    color: var(--danger);
-}
+                <h2>
+                    Detecting
+                    <span>change.</span>
+                </h2>
 
-.section {
-    width: min(1200px, 88vw);
+                <p>
+                    GeoSentinel compares the selected T1 and T2
+                    satellite observations pixel-by-pixel.
+                </p>
+            </div>
 
-    margin: auto;
+        </div>
 
-    padding: 120px 0;
-}
 
-.hero {
-    min-height:
-        calc(100vh - 76px);
+        <div class="analysis-preview">
 
-    display: flex;
+            <div class="analysis-image">
 
-    align-items: center;
-}
+                <img
+                    id="analysisT1"
+                    src="assets/urban_1_T1.png"
+                    alt="Earlier satellite image"
+                >
 
-.hero-grid {
-    display: grid;
+                <div class="image-tag">T1 · BEFORE</div>
 
-    grid-template-columns:
-        1.1fr .9fr;
+            </div>
 
-    gap: 70px;
 
-    align-items: center;
+            <div class="analysis-arrow">
+                →
+            </div>
 
-    width: 100%;
-}
 
-.eyebrow {
-    color: var(--cyan);
+            <div class="analysis-image">
 
-    font-family:
-        "DM Mono";
+                <img
+                    id="analysisT2"
+                    src="assets/urban_1_T2.png"
+                    alt="Later satellite image"
+                >
 
-    font-size: 10px;
+                <div class="image-tag">T2 · AFTER</div>
 
-    letter-spacing: .2em;
+            </div>
 
-    margin-bottom: 20px;
-}
+        </div>
 
-.hero h1 {
-    font-size:
-        clamp(54px, 8vw, 104px);
 
-    line-height: .9;
+        <div class="analysis-status" id="analysisStatus">
 
-    letter-spacing:
-        -.07em;
+            <div class="status-dot"></div>
 
-    font-weight: 800;
-}
+            <span>
+                READY FOR AI ANALYSIS
+            </span>
 
-.hero h1 span,
-.section-heading span,
-.processing-text span {
-    color: transparent;
+        </div>
 
-    -webkit-text-stroke:
-        1px rgba(105,220,255,.75);
 
-    text-shadow:
-        0 0 35px
-        rgba(105,220,255,.15);
-}
+        <div class="analysis-actions">
 
-.hero-description {
-    max-width: 590px;
+            <button id="backBtn" class="secondary-btn">
+                ← BACK
+            </button>
 
-    color: var(--muted);
+            <button id="analyzeBtn" class="primary-btn large">
+                ANALYZE CHANGE
+                <span>✦</span>
+            </button>
 
-    line-height: 1.8;
+        </div>
 
-    margin:
-        30px 0;
-}
+    </section>
 
-.hero-actions {
-    display: flex;
 
-    gap: 12px;
 
-    flex-wrap: wrap;
-}
+    <!-- =====================================================
+         PAGE 3 — RESULTS
+    ====================================================== -->
 
-.primary-btn,
-.ghost-btn,
-.secondary-btn,
-.analyze-btn,
-.file-button {
-    border: 0;
+    <section id="page3" class="page">
 
-    font-family:
-        "DM Mono";
+        <div class="results-header">
 
-    letter-spacing: .08em;
+            <div>
+                <div class="eyebrow">STEP 03 / GEOINTELLIGENCE</div>
 
-    cursor: pointer;
+                <h2>
+                    Change
+                    <span>detected.</span>
+                </h2>
 
-    transition:
-        .25s ease;
-}
+                <p id="resultSummary">
+                    GeoSentinel AI has completed the temporal comparison.
+                </p>
+            </div>
 
-.primary-btn {
-    background: var(--cyan);
+            <div class="result-badge">
+                AI RESULT
+            </div>
 
-    color: #031018;
+        </div>
 
-    padding:
-        16px 22px;
 
-    font-weight: 700;
+        <div class="result-images">
 
-    box-shadow:
-        0 0 30px
-        rgba(105,220,255,.2);
-}
+            <div class="result-card">
 
-.primary-btn:hover {
-    transform:
-        translateY(-3px);
+                <div class="result-card-title">
+                    T1 · BEFORE
+                </div>
 
-    box-shadow:
-        0 0 45px
-        rgba(105,220,255,.4);
-}
+                <img
+                    id="resultT1"
+                    src="assets/urban_1_T1.png"
+                    alt="Before"
+                >
 
-.ghost-btn {
-    background:
-        rgba(255,255,255,.025);
+            </div>
 
-    color: var(--text);
 
-    border:
-        1px solid var(--line);
+            <div class="result-card">
 
-    padding:
-        16px 22px;
-}
+                <div class="result-card-title">
+                    T2 · AFTER
+                </div>
 
-.ghost-btn:hover {
-    border-color:
-        rgba(105,220,255,.4);
-}
+                <img
+                    id="resultT2"
+                    src="assets/urban_1_T2.png"
+                    alt="After"
+                >
 
-.hero-metrics {
-    display: flex;
+            </div>
 
-    gap: 35px;
 
-    margin-top: 50px;
-}
+            <div class="result-card change-result">
 
-.hero-metrics div {
-    display: flex;
+                <div class="result-card-title">
+                    AI CHANGE MAP
+                </div>
 
-    flex-direction: column;
+                <div class="change-map-container">
 
-    gap: 5px;
-}
+                    <canvas
+                        id="changeCanvas"
+                        width="256"
+                        height="256"
+                    ></canvas>
 
-.hero-metrics strong {
-    font-size: 20px;
+                    <div id="mapLoading">
+                        PROCESSING
+                    </div>
 
-    font-family:
-        "DM Mono";
-}
+                </div>
 
-.hero-metrics span {
-    color: var(--muted);
+            </div>
 
-    font-size: 8px;
+        </div>
 
-    letter-spacing: .15em;
-}
 
-.orbital {
-    height: 500px;
+        <div class="metrics">
 
-    position: relative;
+            <div class="metric">
 
-    display: grid;
+                <span>CHANGE AREA</span>
 
-    place-items: center;
-}
+                <strong id="changePercentage">
+                    --
+                </strong>
 
-.earth-core {
-    width: 230px;
-    height: 230px;
+            </div>
 
-    border-radius: 50%;
 
-    position: relative;
+            <div class="metric">
 
-    overflow: hidden;
+                <span>CHANGED PIXELS</span>
 
-    background:
-        radial-gradient(
-            circle at 35% 30%,
-            #285f82,
-            #0b273b 45%,
-            #02070c 75%
-        );
+                <strong id="changePixels">
+                    --
+                </strong>
 
-    box-shadow:
-        0 0 50px
-        rgba(45,156,220,.25),
+            </div>
 
-        inset -25px -15px 50px
-        rgba(0,0,0,.8);
-}
 
-.earth-grid {
-    position: absolute;
+            <div class="metric">
 
-    inset: -20%;
+                <span>TOTAL PIXELS</span>
 
-    background:
-        repeating-linear-gradient(
-            0deg,
-            transparent 0 20px,
-            rgba(105,220,255,.13) 21px
-        ),
-        repeating-linear-gradient(
-            90deg,
-            transparent 0 20px,
-            rgba(105,220,255,.1) 21px
-        );
+                <strong id="totalPixels">
+                    --
+                </strong>
 
-    transform:
-        rotate(-15deg);
+            </div>
 
-    animation:
-        earthRotate 18s linear infinite;
-}
 
-@keyframes earthRotate {
-    to {
-        transform:
-            rotate(345deg);
-    }
-}
+            <div class="metric">
 
-.earth-glow {
-    position: absolute;
+                <span>THRESHOLD</span>
 
-    inset: -30px;
+                <strong id="threshold">
+                    --
+                </strong>
 
-    border-radius: 50%;
+            </div>
 
-    box-shadow:
-        inset -10px -10px 30px
-        rgba(0,0,0,.8),
+        </div>
 
-        0 0 45px
-        rgba(105,220,255,.2);
-}
 
-.earth-core span {
-    position: absolute;
+        <div class="interpretation">
 
-    inset: 0;
+            <div class="interpretation-label">
+                GEOINTELLIGENCE INTERPRETATION
+            </div>
 
-    display: grid;
+            <div
+                id="interpretationText"
+                class="interpretation-text"
+            >
+                Waiting for analysis...
+            </div>
 
-    place-items: center;
+        </div>
 
-    font-family:
-        "DM Mono";
 
-    color:
-        rgba(255,255,255,.8);
+        <div class="result-actions">
 
-    font-size: 25px;
-}
+            <button id="newAnalysisBtn" class="primary-btn">
+                ANALYZE ANOTHER SCENE
+                <span>↻</span>
+            </button>
 
-.orbit {
-    position: absolute;
+        </div>
 
-    border:
-        1px solid
-        rgba(105,220,255,.12);
+    </section>
 
-    border-radius: 50%;
 
-    transform:
-        rotate(-25deg);
-}
+    <!-- =====================================================
+         FOOTER
+    ====================================================== -->
 
-.orbit-one {
-    width: 360px;
-    height: 190px;
+    <footer>
 
-    animation:
-        orbital 8s linear infinite;
-}
+        <span>GEOSENTINEL AI</span>
 
-.orbit-two {
-    width: 450px;
-    height: 240px;
+        <span>
+            SATELLITE CHANGE DETECTION · 13 BANDS · DEEP LEARNING
+        </span>
 
-    animation:
-        orbital 12s linear infinite reverse;
-}
+    </footer>
 
-.orbit-three {
-    width: 550px;
-    height: 290px;
+</div>
 
-    animation:
-        orbital 18s linear infinite;
-}
 
-@keyframes orbital {
-    to {
-        transform:
-            rotate(335deg);
-    }
-}
+<script src="script.js"></script>
 
-.satellite-dot {
-    width: 8px;
-    height: 8px;
-
-    border-radius: 50%;
-
-    background: var(--cyan);
-
-    box-shadow:
-        0 0 20px
-        var(--cyan);
-
-    position: absolute;
-
-    animation:
-        satellite 8s linear infinite;
-}
-
-@keyframes satellite {
-    from {
-        transform:
-            rotate(0deg)
-            translateX(180px)
-            rotate(0deg);
-    }
-
-    to {
-        transform:
-            rotate(360deg)
-            translateX(180px)
-            rotate(-360deg);
-    }
-}
-
-.section-heading {
-    margin-bottom: 55px;
-}
-
-.section-heading h2 {
-    font-size:
-        clamp(38px, 5vw, 65px);
-
-    letter-spacing:
-        -.05em;
-
-    line-height: 1;
-}
-
-.section-heading p {
-    color: var(--muted);
-
-    max-width: 650px;
-
-    line-height: 1.7;
-
-    margin-top: 20px;
-}
-
-.upload-grid {
-    display: grid;
-
-    grid-template-columns:
-        1fr 100px 1fr;
-
-    align-items: center;
-
-    gap: 20px;
-}
-
-.upload-card {
-    min-height: 370px;
-
-    padding: 35px;
-
-    border:
-        1px solid var(--line);
-
-    background:
-        linear-gradient(
-            145deg,
-            rgba(15,26,38,.9),
-            rgba(7,12,18,.8)
-        );
-
-    position: relative;
-
-    overflow: hidden;
-
-    transition: .3s;
-}
-
-.upload-card:hover {
-    border-color:
-        rgba(105,220,255,.4);
-
-    transform:
-        translateY(-5px);
-}
-
-.upload-card::after {
-    content: "";
-
-    position: absolute;
-
-    inset: 0;
-
-    background:
-        linear-gradient(
-            120deg,
-            transparent 45%,
-            rgba(105,220,255,.05),
-            transparent 55%
-        );
-
-    transform:
-        translateX(-100%);
-
-    transition:
-        .6s;
-}
-
-.upload-card:hover::after {
-    transform:
-        translateX(100%);
-}
-
-.card-number {
-    font-family:
-        "DM Mono";
-
-    color: var(--cyan);
-
-    font-size: 11px;
-}
-
-.time-label {
-    margin-top: 50px;
-
-    font-family:
-        "DM Mono";
-
-    font-size: 10px;
-
-    color: var(--muted);
-
-    letter-spacing: .15em;
-}
-
-.upload-icon {
-    font-size: 42px;
-
-    color: var(--cyan);
-
-    margin:
-        20px 0;
-}
-
-.upload-card h3 {
-    font-size: 20px;
-}
-
-.upload-card p {
-    color: var(--muted);
-
-    font-family:
-        "DM Mono";
-
-    font-size: 10px;
-
-    margin:
-        8px 0 20px;
-}
-
-.file-button {
-    display: inline-block;
-
-    padding:
-        12px 17px;
-
-    background:
-        rgba(105,220,255,.1);
-
-    color: var(--cyan);
-
-    border:
-        1px solid
-        rgba(105,220,255,.25);
-
-    font-size: 9px;
-}
-
-.file-button:hover {
-    background:
-        rgba(105,220,255,.18);
-}
-
-.file-name {
-    color: var(--muted);
-
-    font-family:
-        "DM Mono";
-
-    font-size: 9px;
-
-    margin-top: 14px;
-
-    overflow:
-        hidden;
-
-    text-overflow:
-        ellipsis;
-}
-
-.temporal-arrow {
-    display: flex;
-
-    flex-direction: column;
-
-    align-items: center;
-
-    gap: 12px;
-
-    color: var(--cyan);
-}
-
-.temporal-arrow span {
-    font-size: 35px;
-}
-
-.temporal-arrow small {
-    color: var(--muted);
-
-    font-family:
-        "DM Mono";
-
-    font-size: 7px;
-
-    text-align: center;
-
-    line-height: 1.5;
-}
-
-.pulse-ring {
-    width: 35px;
-    height: 35px;
-
-    border:
-        1px solid
-        rgba(105,220,255,.4);
-
-    border-radius: 50%;
-
-    animation:
-        pulse 1.8s ease-out infinite;
-}
-
-@keyframes pulse {
-    0% {
-        transform: scale(.7);
-        opacity: .8;
-    }
-
-    100% {
-        transform: scale(1.6);
-        opacity: 0;
-    }
-}
-
-.analyze-container {
-    margin-top: 40px;
-
-    display: flex;
-
-    flex-direction: column;
-
-    align-items: center;
-
-    gap: 15px;
-}
-
-.analyze-btn {
-    padding:
-        18px 38px;
-
-    background:
-        linear-gradient(
-            90deg,
-            var(--cyan),
-            #8cf4d0
-        );
-
-    color: #041018;
-
-    font-weight: 800;
-
-    font-size: 11px;
-
-    box-shadow:
-        0 0 35px
-        rgba(105,220,255,.18);
-}
-
-.analyze-btn:hover {
-    transform:
-        translateY(-3px)
-        scale(1.02);
-}
-
-.btn-arrow {
-    margin-left: 18px;
-
-    font-size: 18px;
-}
-
-.error-box {
-    color: var(--danger);
-
-    font-family:
-        "DM Mono";
-
-    font-size: 10px;
-
-    max-width: 700px;
-
-    text-align: center;
-}
-
-.processing {
-    min-height: 75vh;
-
-    display: flex;
-
-    align-items: center;
-
-    justify-content: center;
-
-    flex-direction: column;
-
-    text-align: center;
-}
-
-.scanner {
-    position: relative;
-
-    width: 250px;
-    height: 250px;
-
-    display: grid;
-
-    place-items: center;
-
-    margin-bottom: 50px;
-}
-
-.scanner-core {
-    width: 130px;
-    height: 130px;
-
-    border:
-        1px solid
-        rgba(105,220,255,.4);
-
-    border-radius: 50%;
-
-    display: grid;
-
-    place-items: center;
-
-    position: relative;
-
-    box-shadow:
-        0 0 60px
-        rgba(105,220,255,.15);
-}
-
-.scanner-ring {
-    position: absolute;
-
-    width: 190px;
-    height: 190px;
-
-    border:
-        1px solid
-        rgba(105,220,255,.2);
-
-    border-radius: 50%;
-
-    animation:
-        spin 4s linear infinite;
-}
-
-.ring-two {
-    width: 240px;
-    height: 240px;
-
-    border-style: dashed;
-
-    animation-duration: 7s;
-
-    animation-direction: reverse;
-}
-
-@keyframes spin {
-    to {
-        transform:
-            rotate(360deg);
-    }
-}
-
-.scanner-center {
-    font-family:
-        "DM Mono";
-
-    color: var(--cyan);
-
-    font-size: 25px;
-}
-
-.scanner-line {
-    position: absolute;
-
-    left: 5px;
-    right: 5px;
-
-    height: 1px;
-
-    background:
-        linear-gradient(
-            90deg,
-            transparent,
-            var(--cyan),
-            transparent
-        );
-
-    box-shadow:
-        0 0 15px
-        var(--cyan);
-
-    animation:
-        scanCircle 2s ease-in-out infinite;
-}
-
-@keyframes scanCircle {
-    0%,100% {
-        top: 15%;
-    }
-
-    50% {
-        top: 85%;
-    }
-}
-
-.processing-text h2 {
-    font-size:
-        clamp(45px, 6vw, 80px);
-
-    letter-spacing:
-        -.06em;
-}
-
-.processing-text p {
-    color: var(--muted);
-
-    font-family:
-        "DM Mono";
-
-    font-size: 10px;
-
-    margin-top: 20px;
-}
-
-.result-hero {
-    padding: 45px;
-
-    border:
-        1px solid
-        rgba(105,220,255,.18);
-
-    background:
-        radial-gradient(
-            circle at 20% 50%,
-            rgba(105,220,255,.1),
-            transparent 35%
-        ),
-        var(--panel);
-
-    display: flex;
-
-    align-items: center;
-
-    gap: 35px;
-
-    margin-bottom: 30px;
-}
-
-.change-number {
-    font-family:
-        "DM Mono";
-
-    font-size:
-        clamp(55px, 8vw, 100px);
-
-    color: var(--cyan);
-
-    line-height: .8;
-}
-
-.change-number small {
-    font-size: 25px;
-}
-
-.result-label {
-    color: var(--muted);
-
-    font-family:
-        "DM Mono";
-
-    font-size: 9px;
-
-    letter-spacing: .15em;
-}
-
-.result-detail {
-    margin-top: 10px;
-
-    font-family:
-        "DM Mono";
-
-    font-size: 13px;
-}
-
-.map-grid {
-    display: grid;
-
-    grid-template-columns:
-        1fr 1fr;
-
-    gap: 20px;
-}
-
-.map-card {
-    border:
-        1px solid var(--line);
-
-    background:
-        var(--panel);
-
-    padding: 15px;
-}
-
-.map-header {
-    display: flex;
-
-    justify-content: space-between;
-
-    padding: 10px;
-
-    color: var(--muted);
-
-    font-family:
-        "DM Mono";
-
-    font-size: 8px;
-
-    letter-spacing: .1em;
-}
-
-canvas {
-    display: block;
-
-    width: 100%;
-
-    aspect-ratio: 1;
-
-    image-rendering:
-        pixelated;
-
-    background: #03070b;
-}
-
-.stats-grid {
-    display: grid;
-
-    grid-template-columns:
-        repeat(4, 1fr);
-
-    gap: 15px;
-
-    margin:
-        20px 0 30px;
-}
-
-.stat-card {
-    border:
-        1px solid var(--line);
-
-    background:
-        var(--panel);
-
-    padding: 22px;
-}
-
-.stat-card span {
-    display: block;
-
-    color: var(--muted);
-
-    font-family:
-        "DM Mono";
-
-    font-size: 8px;
-
-    margin-bottom: 12px;
-}
-
-.stat-card strong {
-    font-family:
-        "DM Mono";
-
-    font-size: 18px;
-}
-
-.secondary-btn {
-    padding:
-        14px 20px;
-
-    color: var(--cyan);
-
-    background:
-        transparent;
-
-    border:
-        1px solid
-        rgba(105,220,255,.25);
-}
-
-.secondary-btn:hover {
-    background:
-        rgba(105,220,255,.08);
-}
-
-.architecture {
-    display: flex;
-
-    align-items: center;
-
-    justify-content: space-between;
-
-    gap: 10px;
-
-    position: relative;
-
-    margin:
-        60px 0;
-}
-
-.architecture-line {
-    position: absolute;
-
-    left: 5%;
-    right: 5%;
-
-    top: 50%;
-
-    height: 1px;
-
-    background:
-        linear-gradient(
-            90deg,
-            transparent,
-            rgba(105,220,255,.35),
-            transparent
-        );
-
-    z-index: 0;
-}
-
-.architecture-node {
-    width: 150px;
-    height: 120px;
-
-    border:
-        1px solid var(--line);
-
-    background:
-        #071019;
-
-    display: flex;
-
-    align-items: center;
-
-    justify-content: center;
-
-    flex-direction: column;
-
-    gap: 8px;
-
-    position: relative;
-
-    z-index: 1;
-}
-
-.architecture-node strong {
-    font-family:
-        "DM Mono";
-
-    font-size: 13px;
-}
-
-.architecture-node span {
-    color: var(--muted);
-
-    font-family:
-        "DM Mono";
-
-    font-size: 7px;
-}
-
-.architecture-node.highlight {
-    border-color:
-        rgba(105,220,255,.45);
-
-    box-shadow:
-        0 0 30px
-        rgba(105,220,255,.1);
-}
-
-.model-cards {
-    display: grid;
-
-    grid-template-columns:
-        repeat(4,1fr);
-
-    gap: 15px;
-}
-
-.model-cards div {
-    padding: 30px;
-
-    background:
-        var(--panel);
-
-    border:
-        1px solid var(--line);
-}
-
-.model-cards strong {
-    display: block;
-
-    font-family:
-        "DM Mono";
-
-    font-size: 22px;
-
-    color: var(--cyan);
-
-    margin-bottom: 10px;
-}
-
-.model-cards span {
-    font-family:
-        "DM Mono";
-
-    font-size: 8px;
-
-    color: var(--muted);
-
-    letter-spacing: .12em;
-}
-
-footer {
-    padding:
-        35px 6vw;
-
-    border-top:
-        1px solid var(--line);
-
-    display: flex;
-
-    justify-content: space-between;
-
-    color: var(--muted);
-
-    font-family:
-        "DM Mono";
-
-    font-size: 8px;
-
-    letter-spacing: .12em;
-}
-
-.hidden {
-    display: none !important;
-}
-
-@media (max-width: 900px) {
-
-    .hero-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .orbital {
-        height: 350px;
-    }
-
-    .upload-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .temporal-arrow {
-        transform:
-            rotate(90deg);
-    }
-
-    .map-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .stats-grid,
-    .model-cards {
-        grid-template-columns:
-            repeat(2,1fr);
-    }
-
-    .architecture {
-        flex-wrap: wrap;
-    }
-
-    .architecture-line {
-        display: none;
-    }
-}
-
-@media (max-width: 600px) {
-
-    .section {
-        padding:
-            80px 0;
-    }
-
-    .nav {
-        padding:
-            0 5vw;
-    }
-
-    .hero h1 {
-        font-size: 55px;
-    }
-
-    .hero-metrics {
-        gap: 20px;
-    }
-
-    .stats-grid,
-    .model-cards {
-        grid-template-columns: 1fr;
-    }
-
-    .result-hero {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    footer {
-        flex-direction: column;
-        gap: 10px;
-    }
-}
+</body>
+</html>
