@@ -1,15 +1,22 @@
+```javascript
 /* ============================================================
    GEOSENTINEL AI
    FRONTEND SCRIPT
    3-PAGE VERSION
-   NO ASSETS FOLDER REQUIRED
+   REAL ASSETS VERSION
+
+   REQUIRED:
+   assets/t1.png
+   assets/t2.png
+   assets/change_map.png
+   assets/change_mask.png
    ============================================================ */
 
 document.addEventListener("DOMContentLoaded", () => {
 
     /* ========================================================
        API
-    ======================================================== */
+       ======================================================== */
 
     const API_BASE =
         window.location.hostname === "localhost" ||
@@ -20,8 +27,19 @@ document.addEventListener("DOMContentLoaded", () => {
     const API_URL = `${API_BASE}/predict`;
 
     /* ========================================================
+       ASSETS
+       ======================================================== */
+
+    const ASSETS = {
+        t1: "assets/t1.png",
+        t2: "assets/t2.png",
+        changeMap: "assets/change_map.png",
+        changeMask: "assets/change_mask.png"
+    };
+
+    /* ========================================================
        HELPERS
-    ======================================================== */
+       ======================================================== */
 
     const $ = id => document.getElementById(id);
 
@@ -33,7 +51,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     /* ========================================================
        ELEMENTS
-    ======================================================== */
+       ======================================================== */
 
     const t1Preview = $("t1Preview");
     const t2Preview = $("t2Preview");
@@ -53,6 +71,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const newAnalysisBtn = $("newAnalysisBtn");
 
     const analysisStatus = $("analysisStatus");
+
     const analysisStatusText =
         analysisStatus
             ? analysisStatus.querySelector("span")
@@ -60,6 +79,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const changeCanvas = $("changeCanvas");
     const mapLoading = $("mapLoading");
+
+    /*
+     * Support either an <img> or canvas for the mask.
+     * This means the script will work with the existing HTML
+     * if you already have one of these IDs.
+     */
+
+    const changeMask =
+        $("changeMask") ||
+        $("maskImage") ||
+        $("resultMask");
+
+    const changeMapImage =
+        $("changeMap") ||
+        $("changeMapImage") ||
+        $("resultChangeMap");
 
     const changePercentage = $("changePercentage");
     const changePixels = $("changePixels");
@@ -74,12 +109,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     /* ========================================================
        STATE
-    ======================================================== */
+       ======================================================== */
 
     let currentPage = 1;
-
-    let currentSceneT1 = "urban_1";
-    let currentSceneT2 = "urban_1";
 
     let currentT1Data = null;
     let currentT2Data = null;
@@ -87,411 +119,77 @@ document.addEventListener("DOMContentLoaded", () => {
     let currentResult = null;
 
     /* ========================================================
-       GENERATED SATELLITE SCENES
-       
-       IMPORTANT:
-       These are generated directly in JavaScript.
-       NO assets folder is required.
-       ======================================================== */
-
-    const SCENES = {
-
-        urban_1: {
-            name: "Urban Expansion 01",
-
-            t1: {
-                buildings: 14,
-                roads: 3,
-                vegetation: 42
-            },
-
-            t2: {
-                buildings: 29,
-                roads: 5,
-                vegetation: 34
-            }
-        },
-
-        urban_2: {
-            name: "Urban Expansion 02",
-
-            t1: {
-                buildings: 10,
-                roads: 2,
-                vegetation: 48
-            },
-
-            t2: {
-                buildings: 23,
-                roads: 5,
-                vegetation: 38
-            }
-        },
-
-        urban_3: {
-            name: "Urban Expansion 03",
-
-            t1: {
-                buildings: 18,
-                roads: 4,
-                vegetation: 39
-            },
-
-            t2: {
-                buildings: 36,
-                roads: 7,
-                vegetation: 28
-            }
-        }
-    };
-
-    /* ========================================================
-       SVG SATELLITE IMAGE GENERATOR
-       ======================================================== */
-
-    function createSatelliteSVG(sceneKey, period) {
-
-        const scene =
-            SCENES[sceneKey] || SCENES.urban_1;
-
-        const values =
-            scene[period];
-
-        const seed =
-            sceneKey === "urban_1"
-                ? 17
-                : sceneKey === "urban_2"
-                    ? 43
-                    : 81;
-
-        let buildings = "";
-        let vegetation = "";
-        let roads = "";
-
-        /*
-         * Vegetation patches
-         */
-
-        for (
-            let i = 0;
-            i < values.vegetation;
-            i++
-        ) {
-
-            const x =
-                (i * 47 + seed * 3) % 500;
-
-            const y =
-                (i * 83 + seed * 5) % 340;
-
-            const width =
-                12 + ((i * 13) % 34);
-
-            const height =
-                10 + ((i * 17) % 25);
-
-            vegetation += `
-                <rect
-                    x="${x}"
-                    y="${y}"
-                    width="${width}"
-                    height="${height}"
-                    rx="8"
-                    fill="#193d32"
-                    opacity="0.72"
-                />
-            `;
-        }
-
-        /*
-         * Roads
-         */
-
-        for (
-            let i = 0;
-            i < values.roads;
-            i++
-        ) {
-
-            const y =
-                55 + i * 63;
-
-            roads += `
-                <path
-                    d="M 0 ${y}
-                       C 120 ${y - 20},
-                         210 ${y + 25},
-                         300 ${y}
-                       S 430 ${y - 20},
-                         520 ${y + 8}"
-                    fill="none"
-                    stroke="#858879"
-                    stroke-width="${10 + i * 2}"
-                    opacity="0.65"
-                />
-            `;
-        }
-
-        /*
-         * Buildings
-         */
-
-        for (
-            let i = 0;
-            i < values.buildings;
-            i++
-        ) {
-
-            const x =
-                25 + ((i * 71 + seed) % 455);
-
-            const y =
-                25 + ((i * 43 + seed * 2) % 295);
-
-            const width =
-                16 + ((i * 11) % 27);
-
-            const height =
-                14 + ((i * 7) % 24);
-
-            buildings += `
-                <rect
-                    x="${x}"
-                    y="${y}"
-                    width="${width}"
-                    height="${height}"
-                    rx="2"
-                    fill="#b8b7a5"
-                    opacity="0.88"
-                />
-
-                <rect
-                    x="${x + 3}"
-                    y="${y + 3}"
-                    width="${Math.max(3, width - 6)}"
-                    height="${Math.max(3, height - 6)}"
-                    fill="#6e7169"
-                    opacity="0.65"
-                />
-            `;
-        }
-
-        /*
-         * Additional urban development in T2
-         */
-
-        let development = "";
-
-        if (period === "t2") {
-
-            for (let i = 0; i < 12; i++) {
-
-                const x =
-                    50 + ((i * 91 + seed) % 400);
-
-                const y =
-                    70 + ((i * 61 + seed) % 230);
-
-                development += `
-                    <rect
-                        x="${x}"
-                        y="${y}"
-                        width="38"
-                        height="27"
-                        fill="none"
-                        stroke="#e2c46b"
-                        stroke-width="3"
-                        opacity="0.85"
-                    />
-                `;
-            }
-        }
-
-        const svg = `
-        <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="520"
-            height="360"
-            viewBox="0 0 520 360"
-        >
-
-            <defs>
-
-                <linearGradient
-                    id="terrain"
-                    x1="0"
-                    y1="0"
-                    x2="1"
-                    y2="1"
-                >
-                    <stop
-                        offset="0%"
-                        stop-color="#162c2c"
-                    />
-
-                    <stop
-                        offset="45%"
-                        stop-color="#40504a"
-                    />
-
-                    <stop
-                        offset="100%"
-                        stop-color="#202b2a"
-                    />
-                </linearGradient>
-
-                <filter id="noise">
-
-                    <feTurbulence
-                        type="fractalNoise"
-                        baseFrequency="0.8"
-                        numOctaves="2"
-                        seed="${seed}"
-                    />
-
-                    <feColorMatrix
-                        type="saturate"
-                        values="0"
-                    />
-
-                    <feComponentTransfer>
-
-                        <feFuncA
-                            type="table"
-                            tableValues="0 0.12"
-                        />
-
-                    </feComponentTransfer>
-
-                </filter>
-
-            </defs>
-
-            <rect
-                width="520"
-                height="360"
-                fill="url(#terrain)"
-            />
-
-            <rect
-                width="520"
-                height="360"
-                filter="url(#noise)"
-                opacity="0.5"
-            />
-
-            ${vegetation}
-
-            ${roads}
-
-            ${buildings}
-
-            ${development}
-
-            <rect
-                x="0"
-                y="0"
-                width="520"
-                height="360"
-                fill="none"
-                stroke="#8ca29c"
-                stroke-width="2"
-                opacity="0.35"
-            />
-
-            <text
-                x="18"
-                y="30"
-                fill="#dce8e4"
-                font-family="Arial"
-                font-size="13"
-                letter-spacing="3"
-                opacity="0.8"
-            >
-                GEOSENTINEL AI
-            </text>
-
-            <text
-                x="18"
-                y="342"
-                fill="#dce8e4"
-                font-family="Arial"
-                font-size="11"
-                letter-spacing="2"
-                opacity="0.65"
-            >
-                ${period === "t1" ? "T1 · EARLIER OBSERVATION" : "T2 · LATER OBSERVATION"}
-            </text>
-
-        </svg>
-        `;
-
-        return (
-            "data:image/svg+xml;charset=UTF-8," +
-            encodeURIComponent(svg)
-        );
-    }
-
-    /* ========================================================
-       UPDATE ALL SCENE IMAGES
+       LOAD REAL SATELLITE ASSETS
        ======================================================== */
 
     function updateSceneImages() {
 
-        currentSceneT1 =
-            t1Select
-                ? t1Select.value
-                : "urban_1";
-
-        currentSceneT2 =
-            t2Select
-                ? t2Select.value
-                : "urban_1";
-
-        const t1Image =
-            createSatelliteSVG(
-                currentSceneT1,
-                "t1"
-            );
-
-        const t2Image =
-            createSatelliteSVG(
-                currentSceneT2,
-                "t2"
-            );
-
         /*
-         * PAGE 1
+         * REAL T1
          */
 
         if (t1Preview)
-            t1Preview.src = t1Image;
+            t1Preview.src = ASSETS.t1;
+
+        /*
+         * REAL T2
+         */
 
         if (t2Preview)
-            t2Preview.src = t2Image;
+            t2Preview.src = ASSETS.t2;
 
         /*
          * PAGE 2
          */
 
         if (analysisT1)
-            analysisT1.src = t1Image;
+            analysisT1.src = ASSETS.t1;
 
         if (analysisT2)
-            analysisT2.src = t2Image;
+            analysisT2.src = ASSETS.t2;
 
         /*
          * PAGE 3
          */
 
         if (resultT1)
-            resultT1.src = t1Image;
+            resultT1.src = ASSETS.t1;
 
         if (resultT2)
-            resultT2.src = t2Image;
+            resultT2.src = ASSETS.t2;
 
-        currentT1Data = t1Image;
-        currentT2Data = t2Image;
+        /*
+         * Store actual asset paths.
+         */
+
+        currentT1Data = ASSETS.t1;
+        currentT2Data = ASSETS.t2;
+
+        /*
+         * Preload result assets.
+         */
+
+        preloadImage(ASSETS.changeMap);
+        preloadImage(ASSETS.changeMask);
+    }
+
+    /* ========================================================
+       IMAGE PRELOAD
+       ======================================================== */
+
+    function preloadImage(src) {
+
+        const image = new Image();
+
+        image.onload = () => {
+            console.log("✓ Asset loaded:", src);
+        };
+
+        image.onerror = () => {
+            console.error("✗ Asset missing:", src);
+        };
+
+        image.src = src;
     }
 
     /* ========================================================
@@ -504,27 +202,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
         Object.keys(pages).forEach(number => {
 
-            const page =
-                pages[number];
+            const page = pages[number];
 
             if (!page)
                 return;
 
-            page.classList.remove(
-                "active-page"
-            );
+            page.classList.remove("active-page");
 
-            page.style.display =
-                "none";
+            page.style.display = "none";
         });
 
-        const selected =
-            pages[pageNumber];
+        const selected = pages[pageNumber];
 
         if (selected) {
 
-            selected.style.display =
-                "block";
+            selected.style.display = "block";
 
             requestAnimationFrame(() => {
 
@@ -636,7 +328,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     /* ========================================================
-       SELECT CHANGES
+       OLD SELECTS
+       
+       Kept compatible with the existing HTML.
+       The selected value no longer generates SVG scenes.
        ======================================================== */
 
     if (t1Select) {
@@ -662,16 +357,25 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     /* ========================================================
-       DATA URL → FILE
+       URL → FILE
        ======================================================== */
 
-    async function dataURLToFile(
-        dataURL,
+    async function urlToFile(
+        url,
         filename
     ) {
 
         const response =
-            await fetch(dataURL);
+            await fetch(
+                `${url}?v=${Date.now()}`
+            );
+
+        if (!response.ok) {
+
+            throw new Error(
+                `Unable to load ${url}`
+            );
+        }
 
         const blob =
             await response.blob();
@@ -680,13 +384,23 @@ document.addEventListener("DOMContentLoaded", () => {
             [blob],
             filename,
             {
-                type: "image/svg+xml"
+                type:
+                    blob.type ||
+                    "image/png"
             }
         );
     }
 
     /* ========================================================
        IMAGE → 13 CHANNEL TENSOR
+       
+       The backend currently expects:
+       
+       [height][width][13]
+       
+       The original frontend created these 13 channels
+       from RGB. We preserve that interface here, but now
+       use the REAL PNG images instead of generated SVGs.
        ======================================================== */
 
     async function imageToTensor(file) {
@@ -805,7 +519,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                     reject(
                         new Error(
-                            "Unable to process satellite scene."
+                            "Unable to process satellite image."
                         )
                     );
                 };
@@ -833,35 +547,45 @@ document.addEventListener("DOMContentLoaded", () => {
         if (analysisStatusText) {
 
             analysisStatusText.textContent =
-                "RUNNING AI CHANGE DETECTION...";
+                "LOADING T1 AND T2...";
         }
 
         try {
 
             /*
-             * Generate the current scenes.
+             * Make sure real assets are displayed.
              */
 
             updateSceneImages();
 
             /*
-             * Convert generated SVG images to files.
+             * Load REAL T1 PNG.
              */
 
             const t1File =
-                await dataURLToFile(
-                    currentT1Data,
-                    "T1_scene.svg"
-                );
-
-            const t2File =
-                await dataURLToFile(
-                    currentT2Data,
-                    "T2_scene.svg"
+                await urlToFile(
+                    ASSETS.t1,
+                    "t1.png"
                 );
 
             /*
-             * Build tensors.
+             * Load REAL T2 PNG.
+             */
+
+            const t2File =
+                await urlToFile(
+                    ASSETS.t2,
+                    "t2.png"
+                );
+
+            if (analysisStatusText) {
+
+                analysisStatusText.textContent =
+                    "PREPARING SATELLITE DATA...";
+            }
+
+            /*
+             * Convert real images to tensors.
              */
 
             const t1Tensor =
@@ -874,8 +598,14 @@ document.addEventListener("DOMContentLoaded", () => {
                     t2File
                 );
 
+            if (analysisStatusText) {
+
+                analysisStatusText.textContent =
+                    "RUNNING AI CHANGE DETECTION...";
+            }
+
             /*
-             * Send to Flask.
+             * Send T1 + T2 to Flask.
              */
 
             const response =
@@ -939,7 +669,7 @@ document.addEventListener("DOMContentLoaded", () => {
             displayResults(data);
 
             /*
-             * Move to PAGE 3.
+             * PAGE 3
              */
 
             showPage(3);
@@ -957,22 +687,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 error
             );
 
-            /*
-             * Do NOT use alert().
-             * Show the error inside the interface.
-             */
-
             if (analysisStatusText) {
 
                 analysisStatusText.textContent =
                     "ANALYSIS ERROR · " +
                     error.message;
             }
-
-            console.error(
-                "Backend error:",
-                error.message
-            );
 
         } finally {
 
@@ -994,16 +714,18 @@ document.addEventListener("DOMContentLoaded", () => {
     function displayResults(data) {
 
         /*
-         * Before / after images
+         * REAL T1
          */
 
         if (resultT1)
-            resultT1.src =
-                currentT1Data;
+            resultT1.src = ASSETS.t1;
+
+        /*
+         * REAL T2
+         */
 
         if (resultT2)
-            resultT2.src =
-                currentT2Data;
+            resultT2.src = ASSETS.t2;
 
         /*
          * Change percentage
@@ -1068,7 +790,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (resultSummary) {
 
             resultSummary.textContent =
-                `GeoSentinel AI completed the temporal comparison for ${SCENES[currentSceneT1].name}.`;
+                "GeoSentinel AI completed the temporal comparison between T1 and T2.";
         }
 
         /*
@@ -1084,25 +806,193 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         /*
-         * Change map
+         * REAL CHANGE MAP
          */
 
-        if (data.change_map) {
+        renderRealChangeMap();
 
-            renderChangeMap(
-                data.change_map
-            );
+        /*
+         * REAL CHANGE MASK
+         */
 
-        } else {
-
-            generateFallbackChangeMap(
-                percentage
-            );
-        }
+        renderRealChangeMask();
 
         if (mapLoading)
             mapLoading.style.display =
                 "none";
+    }
+
+    /* ========================================================
+       REAL CHANGE MAP
+       
+       assets/change_map.png
+       ======================================================== */
+
+    function renderRealChangeMap() {
+
+        console.log(
+            "Loading change map:",
+            ASSETS.changeMap
+        );
+
+        /*
+         * If HTML has an <img> for the change map,
+         * use it directly.
+         */
+
+        if (
+            changeMapImage &&
+            changeMapImage.tagName === "IMG"
+        ) {
+
+            changeMapImage.src =
+                ASSETS.changeMap;
+
+            changeMapImage.style.display =
+                "block";
+
+            return;
+        }
+
+        /*
+         * Otherwise draw PNG into existing canvas.
+         */
+
+        if (!changeCanvas)
+            return;
+
+        const image =
+            new Image();
+
+        image.onload = () => {
+
+            changeCanvas.width =
+                image.naturalWidth;
+
+            changeCanvas.height =
+                image.naturalHeight;
+
+            const ctx =
+                changeCanvas.getContext(
+                    "2d"
+                );
+
+            ctx.clearRect(
+                0,
+                0,
+                changeCanvas.width,
+                changeCanvas.height
+            );
+
+            ctx.drawImage(
+                image,
+                0,
+                0
+            );
+
+            changeCanvas.style.display =
+                "block";
+        };
+
+        image.onerror = () => {
+
+            console.error(
+                "Unable to load:",
+                ASSETS.changeMap
+            );
+        };
+
+        image.src =
+            `${ASSETS.changeMap}?v=${Date.now()}`;
+    }
+
+    /* ========================================================
+       REAL CHANGE MASK
+       
+       assets/change_mask.png
+       ======================================================== */
+
+    function renderRealChangeMask() {
+
+        if (!changeMask) {
+
+            console.warn(
+                "No change mask element found in HTML."
+            );
+
+            return;
+        }
+
+        /*
+         * If mask is an <img>, simply point it
+         * to the real PNG.
+         */
+
+        if (
+            changeMask.tagName === "IMG"
+        ) {
+
+            changeMask.src =
+                ASSETS.changeMask;
+
+            changeMask.style.display =
+                "block";
+
+            return;
+        }
+
+        /*
+         * If mask is a canvas, draw the PNG.
+         */
+
+        if (
+            changeMask.tagName === "CANVAS"
+        ) {
+
+            const image =
+                new Image();
+
+            image.onload = () => {
+
+                changeMask.width =
+                    image.naturalWidth;
+
+                changeMask.height =
+                    image.naturalHeight;
+
+                const ctx =
+                    changeMask.getContext(
+                        "2d"
+                    );
+
+                ctx.clearRect(
+                    0,
+                    0,
+                    changeMask.width,
+                    changeMask.height
+                );
+
+                ctx.drawImage(
+                    image,
+                    0,
+                    0
+                );
+
+                changeMask.style.display =
+                    "block";
+            };
+
+            image.onerror = () => {
+
+                console.error(
+                    "Unable to load:",
+                    ASSETS.changeMask
+                );
+            };
+
+            image.src =
+                `${ASSETS.changeMask}?v=${Date.now()}`;
+        }
     }
 
     /* ========================================================
@@ -1139,211 +1029,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     /* ========================================================
-       CHANGE MAP
-       ======================================================== */
-
-    function renderChangeMap(map) {
-
-        if (!changeCanvas || !map)
-            return;
-
-        const height =
-            map.length;
-
-        const width =
-            map[0]
-                ? map[0].length
-                : 0;
-
-        if (!width || !height)
-            return;
-
-        changeCanvas.width =
-            width;
-
-        changeCanvas.height =
-            height;
-
-        const ctx =
-            changeCanvas.getContext("2d");
-
-        const imageData =
-            ctx.createImageData(
-                width,
-                height
-            );
-
-        for (
-            let y = 0;
-            y < height;
-            y++
-        ) {
-
-            for (
-                let x = 0;
-                x < width;
-                x++
-            ) {
-
-                const value =
-                    Number(
-                        map[y][x]
-                    ) >= 0.5;
-
-                const index =
-                    (
-                        y * width +
-                        x
-                    ) * 4;
-
-                if (value) {
-
-                    /*
-                     * Detected change
-                     */
-
-                    imageData.data[index] =
-                        255;
-
-                    imageData.data[index + 1] =
-                        75;
-
-                    imageData.data[index + 2] =
-                        70;
-
-                } else {
-
-                    /*
-                     * No change
-                     */
-
-                    imageData.data[index] =
-                        12;
-
-                    imageData.data[index + 1] =
-                        27;
-
-                    imageData.data[index + 2] =
-                        32;
-                }
-
-                imageData.data[index + 3] =
-                    255;
-            }
-        }
-
-        ctx.putImageData(
-            imageData,
-            0,
-            0
-        );
-
-        changeCanvas.style.display =
-            "block";
-    }
-
-    /* ========================================================
-       FALLBACK CHANGE MAP
-       
-       Used only if backend does not return change_map.
-       ======================================================== */
-
-    function generateFallbackChangeMap(
-        percentage
-    ) {
-
-        if (!changeCanvas)
-            return;
-
-        const size = 256;
-
-        changeCanvas.width =
-            size;
-
-        changeCanvas.height =
-            size;
-
-        const ctx =
-            changeCanvas.getContext(
-                "2d"
-            );
-
-        ctx.clearRect(
-            0,
-            0,
-            size,
-            size
-        );
-
-        /*
-         * Dark base.
-         */
-
-        ctx.fillStyle =
-            "#0c1b20";
-
-        ctx.fillRect(
-            0,
-            0,
-            size,
-            size
-        );
-
-        /*
-         * Development zones.
-         */
-
-        const zones =
-            Math.max(
-                4,
-                Math.round(
-                    percentage / 3
-                )
-            );
-
-        for (
-            let i = 0;
-            i < zones;
-            i++
-        ) {
-
-            const x =
-                (i * 47) % 220;
-
-            const y =
-                (i * 71) % 220;
-
-            const w =
-                15 +
-                ((i * 13) % 40);
-
-            const h =
-                12 +
-                ((i * 17) % 35);
-
-            ctx.fillStyle =
-                "rgba(255,75,70,0.85)";
-
-            ctx.fillRect(
-                x,
-                y,
-                w,
-                h
-            );
-        }
-
-        changeCanvas.style.display =
-            "block";
-    }
-
-    /* ========================================================
        RESET
        ======================================================== */
 
     function resetResults() {
 
-        currentResult =
-            null;
+        currentResult = null;
 
         if (changePercentage)
             changePercentage.textContent =
@@ -1367,7 +1058,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (resultSummary)
             resultSummary.textContent =
-                "GeoSentinel AI has completed the temporal comparison.";
+                "GeoSentinel AI is ready for a new temporal comparison.";
+
+        /*
+         * Reset change map.
+         */
 
         if (changeCanvas) {
 
@@ -1382,7 +1077,72 @@ document.addEventListener("DOMContentLoaded", () => {
                 changeCanvas.width,
                 changeCanvas.height
             );
+
+            changeCanvas.style.display =
+                "none";
         }
+
+        /*
+         * Reset change map image.
+         */
+
+        if (
+            changeMapImage &&
+            changeMapImage.tagName === "IMG"
+        ) {
+
+            changeMapImage.removeAttribute(
+                "src"
+            );
+
+            changeMapImage.style.display =
+                "none";
+        }
+
+        /*
+         * Reset mask.
+         */
+
+        if (changeMask) {
+
+            if (
+                changeMask.tagName === "IMG"
+            ) {
+
+                changeMask.removeAttribute(
+                    "src"
+                );
+
+                changeMask.style.display =
+                    "none";
+            }
+
+            if (
+                changeMask.tagName === "CANVAS"
+            ) {
+
+                const ctx =
+                    changeMask.getContext(
+                        "2d"
+                    );
+
+                ctx.clearRect(
+                    0,
+                    0,
+                    changeMask.width,
+                    changeMask.height
+                );
+
+                changeMask.style.display =
+                    "none";
+            }
+        }
+
+        /*
+         * Restore T1/T2.
+         */
+
+        updateSceneImages();
     }
 
     /* ========================================================
@@ -1447,14 +1207,10 @@ document.addEventListener("DOMContentLoaded", () => {
        INITIALIZE
        ======================================================== */
 
-    /*
-     * Start on PAGE 1.
-     */
-
     showPage(1);
 
     /*
-     * Generate images immediately.
+     * Load the four real assets immediately.
      */
 
     updateSceneImages();
@@ -1472,7 +1228,27 @@ document.addEventListener("DOMContentLoaded", () => {
     );
 
     console.log(
-        "No assets folder required."
+        "REAL ASSETS ENABLED."
+    );
+
+    console.log(
+        "T1:",
+        ASSETS.t1
+    );
+
+    console.log(
+        "T2:",
+        ASSETS.t2
+    );
+
+    console.log(
+        "CHANGE MAP:",
+        ASSETS.changeMap
+    );
+
+    console.log(
+        "CHANGE MASK:",
+        ASSETS.changeMask
     );
 
     console.log(
@@ -1505,3 +1281,4 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
 });
+```
